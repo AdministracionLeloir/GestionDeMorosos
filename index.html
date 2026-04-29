@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión - Instituto Leloir</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfdfb;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #064e3b20;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        
+        const Icon = ({ name, size = 20, className = "" }) => {
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        const App = () => {
+            const [families, setFamilies] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [searchTerm, setSearchTerm] = useState("");
+            const [selectedFamily, setSelectedFamily] = useState(null);
+            
+            const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEUAScY_WitIBOi5oqPCW0IV8-FE-8UMzV1PTaDZhYJrP9283ZIEp--4wNsLJJ5MX3skdScKj669H/pub?gid=0&single=true&output=csv';
+
+            // Configuración de meses y sus índices de vencimiento (0 = Enero, 11 = Dic)
+            const MONTH_CONFIG = [
+                { name: "Marzo", monthIndex: 2 },
+                { name: "Abril", monthIndex: 3 },
+                { name: "Mayo", monthIndex: 4 },
+                { name: "Junio", monthIndex: 5 },
+                { name: "Mant. Junio", monthIndex: 5 }, // Mantenimiento vence en Junio
+                { name: "Julio", monthIndex: 6 },
+                { name: "Agosto", monthIndex: 7 },
+                { name: "Septiembre", monthIndex: 8 },
+                { name: "Octubre", monthIndex: 9 },
+                { name: "Noviembre", monthIndex: 10 },
+                { name: "Mant. Noviembre", monthIndex: 10 },
+                { name: "Diciembre", monthIndex: 11 }
+            ];
+
+            useEffect(() => {
+                fetchData();
+            }, []);
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
+
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch(CSV_URL);
+                    const text = await response.text();
+                    const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+                    
+                    const now = new Date();
+                    const currentMonth = now.getMonth(); // 0-11
+                    const currentYear = now.getFullYear();
+
+                    const parsedData = lines.slice(1).map((row, index) => {
+                        const cols = [];
+                        let current = '';
+                        let inQuotes = false;
+                        for (let char of row) {
+                            if (char === '"') inQuotes = !inQuotes;
+                            else if (char === ',' && !inQuotes) {
+                                cols.push(current.trim());
+                                current = '';
+                            } else {
+                                current += char;
+                            }
+                        }
+                        cols.push(current.trim());
+
+                        const level = cols[0] || "N/A";
+                        const grade = cols[1] || "S/D";
+                        const studentName = (cols[4] || "S/A").toUpperCase();
+                        const inscripcionRaw = cols[9] || "";
+                        
+                        // Datos de cuotas (L es indice 11)
+                        const feeData = cols.slice(11, 23); 
+                        const unpaidMonths = [];
+                        
+                        feeData.forEach((val, idx) => {
+                            const config = MONTH_CONFIG[idx];
+                            if (!config) return;
+
+                            // LÓGICA DE DEUDA TEMPORAL:
+                            // Solo contamos como deuda si:
+                            // 1. La celda está vacía (o dice debe)
+                            // 2. El mes de la cuota ya pasó o es el mes actual
+                            const isPastOrCurrent = config.monthIndex <= currentMonth;
+                            const isEmpty = !val || val.trim() === "" || val.toLowerCase() === "debe";
+
+                            if (isEmpty && isPastOrCurrent) {
+                                unpaidMonths.push(config.name);
+                            }
+                        });
+
+                        return {
+                            id: index,
+                            level,
+                            grade,
+                            fullName: studentName,
+                            hasInscripcion: inscripcionRaw.trim() !== "",
+                            unpaidMonthsList: unpaidMonths,
+                            monthsOwed: unpaidMonths.length
+                        };
+                    });
+
+                    setFamilies(parsedData);
+                } catch (error) {
+                    console.error("Error al cargar datos:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const filteredFamilies = useMemo(() => {
+                return families.filter(f => 
+                    f.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    f.grade.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }, [families, searchTerm]);
+
+            const metrics = useMemo(() => {
+                if (families.length === 0) return { totalMonths: 0, alDia: 0, morosos: 0 };
+                const totalMonths = families.reduce((acc, f) => acc + f.monthsOwed, 0);
+                const morosos = families.filter(f => f.monthsOwed >= 3).length;
+                const alDia = families.filter(f => f.monthsOwed === 0).length;
+                return { totalMonths, alDia, morosos };
+            }, [families]);
+
+            return (
+                <div className="min-h-screen flex bg-[#fdfdfb] text-slate-800 font-sans">
+                    <aside className="w-72 bg-[#064e3b] flex flex-col fixed h-full z-50 text-white shadow-2xl">
+                        <div className="p-8 flex flex-col items-center border-b border-white/10 text-center">
+                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-4">
+                                <Icon name="graduation-cap" size={32} />
+                            </div>
+                            <span className="text-lg font-black block uppercase tracking-tight">Instituto Leloir</span>
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">Gestión de Cobranzas</span>
+                        </div>
+
+                        <nav className="flex-1 px-4 mt-8 space-y-2">
+                            <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/10 text-white shadow-lg border-l-4 border-white">
+                                <Icon name="layout-dashboard" size={18}/> <span className="font-bold text-sm">Estado de Cuotas</span>
+                            </div>
+                        </nav>
+
+                        <div className="p-6">
+                            <button onClick={fetchData} className="w-full bg-emerald-500/20 p-4 rounded-2xl flex items-center justify-center gap-3 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all group">
+                                <Icon name="refresh-cw" size={16} className={loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-700"} />
+                                <span className="text-xs font-bold uppercase tracking-tighter">Sincronizar Planilla</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    <main className="flex-1 ml-72 p-10">
+                        <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-200/60">
+                            <div>
+                                <h1 className="text-2xl font-black text-[#064e3b] uppercase tracking-tight">Control de Morosidad</h1>
+                                <p className="text-slate-400 text-sm font-medium">Deuda calculada al mes de: <span className="text-[#064e3b] font-bold uppercase">{new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date())}</span></p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Base de Datos Conectada</span>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                            <MetricCard label="Cuotas Vencidas" value={metrics.totalMonths} color="border-l-[#064e3b]" subText="Total a cobrar hoy" />
+                            <MetricCard label="Alumnos al Día" value={metrics.alDia} color="border-l-emerald-500" subText="Sin deudas a la fecha" />
+                            <MetricCard label="En Mora Crítica" value={metrics.morosos} color="border-l-red-600" subText="+3 meses de atraso" />
+                        </div>
+
+                        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                            <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                                <h3 className="text-xs font-black text-[#064e3b] uppercase tracking-widest">Estudiantes (Col E y B)</h3>
+                                <div className="relative w-80">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar..." 
+                                        className="w-full pl-4 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none text-xs focus:ring-2 focus:ring-emerald-500/20"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="text-[#064e3b]/60 text-[10px] uppercase font-black bg-emerald-50/20">
+                                            <th className="px-8 py-5">Nombre y Apellido</th>
+                                            <th className="px-6 py-5">Curso</th>
+                                            <th className="px-6 py-5 text-center">Inscripción</th>
+                                            <th className="px-6 py-5 text-center">Cuotas Deuda</th>
+                                            <th className="px-6 py-5">Estado Actual</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredFamilies.map((family) => (
+                                            <tr key={family.id} onClick={() => setSelectedFamily(family)} className="hover:bg-emerald-50/30 transition-all cursor-pointer group">
+                                                <td className="px-8 py-5 font-bold text-[#064e3b] text-sm uppercase">{family.fullName}</td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-[10px] font-black text-slate-500 uppercase">{family.grade}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${family.hasInscripcion ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {family.hasInscripcion ? 'PAGADO' : 'PENDIENTE'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-black text-[#064e3b] text-lg">{family.monthsOwed}</td>
+                                                <td className="px-6 py-5">
+                                                    <StatusBadge months={family.monthsOwed} />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {selectedFamily && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                                <div className="absolute inset-0 bg-[#064e3b]/50 backdrop-blur-md" onClick={() => setSelectedFamily(null)}></div>
+                                <div className="relative bg-white w-full max-w-lg rounded-[3rem] shadow-2xl p-10">
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div className="flex gap-4 items-center">
+                                            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-[#064e3b]">
+                                                <Icon name="user" size={24} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-black text-[#064e3b] uppercase leading-tight">{selectedFamily.fullName}</h2>
+                                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{selectedFamily.grade}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setSelectedFamily(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                            <Icon name="x" size={24} />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <h5 className="text-[10px] font-black text-[#064e3b]/60 uppercase tracking-[0.2em] mb-4">Meses Adeudados a la Fecha</h5>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {selectedFamily.unpaidMonthsList.length > 0 ? (
+                                                selectedFamily.unpaidMonthsList.map((month, i) => (
+                                                    <div key={i} className="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100">
+                                                        <span className="text-[10px] font-black uppercase text-red-700">{month}</span>
+                                                        <Icon name="alert-circle" size={12} className="text-red-400" />
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="col-span-2 py-8 text-center bg-emerald-50 rounded-3xl border border-emerald-100">
+                                                    <Icon name="check-circle" size={32} className="mx-auto mb-2 text-emerald-500" />
+                                                    <p className="text-xs text-emerald-700 font-black uppercase tracking-widest">¡Sin deudas pendientes!</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="mt-8 text-[9px] text-center text-slate-400 font-medium italic border-t pt-4">
+                                        Solo se muestran meses transcurridos con celda vacía en la planilla.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const MetricCard = ({ label, value, color, subText }) => (
+            <div className={`bg-white p-6 rounded-[2rem] border border-slate-100 border-l-8 ${color} shadow-sm`}>
+                <p className="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">{label}</p>
+                <h3 className="text-3xl font-black text-[#064e3b]">{value}</h3>
+                <p className="text-[9px] text-slate-400 mt-1 font-bold italic">{subText}</p>
+            </div>
+        );
+
+        const StatusBadge = ({ months }) => {
+            if (months === 0) return <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">Al Día</span>;
+            if (months < 3) return <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200">Pendiente</span>;
+            return <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase bg-red-50 text-red-700 border border-red-200">Mora Crítica</span>;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
