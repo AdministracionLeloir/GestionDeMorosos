@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión — Instituto Leloir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0f1117;
+            color: #e8e8e0;
+            margin: 0;
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a3a2e; border-radius: 10px; }
+
+        .serif { font-family: 'DM Serif Display', serif; }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #0d1f16 0%, #071510 100%);
+            border-right: 1px solid #1e3329;
+        }
+
+        /* Glow effects */
+        .glow-green { box-shadow: 0 0 30px rgba(52,211,153,0.08); }
+        .glow-red { box-shadow: 0 0 20px rgba(239,68,68,0.12); }
+
+        /* Cards */
+        .metric-card {
+            background: linear-gradient(135deg, #131d17 0%, #0f1a13 100%);
+            border: 1px solid #1e3329;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); border-color: #2d5a3d; }
+
+        /* Table */
+        .data-table tbody tr {
+            transition: background 0.15s;
+            border-bottom: 1px solid #161f19;
+        }
+        .data-table tbody tr:hover { background: #141e18; cursor: pointer; }
+
+        /* Badges */
+        .badge-ok    { background:#0d2e1c; color:#34d399; border:1px solid #1a4a2e; }
+        .badge-warn  { background:#2a1f0a; color:#fbbf24; border:1px solid #4a3510; }
+        .badge-crit  { background:#2a0e0e; color:#f87171; border:1px solid #4a1818; }
+        .badge-insc-ok   { background:#0d2e1c; color:#34d399; border:1px solid #1a4a2e; }
+        .badge-insc-pend { background:#2a0e0e; color:#f87171; border:1px solid #4a1818; }
+
+        /* Modal */
+        .modal-backdrop {
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+        }
+        .modal-card {
+            background: linear-gradient(145deg, #111a14, #0d1710);
+            border: 1px solid #1e3329;
+        }
+
+        /* Search */
+        .search-input {
+            background: #0d1710;
+            border: 1px solid #1e3329;
+            color: #e8e8e0;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgba(52,211,153,0.1);
+        }
+        .search-input::placeholder { color: #3d5a47; }
+
+        /* Filter buttons */
+        .filter-btn {
+            background: #0d1710;
+            border: 1px solid #1e3329;
+            color: #7a9e87;
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+        .filter-btn:hover { border-color: #2d5a3d; color: #b5d4be; }
+        .filter-btn.active {
+            background: #163825;
+            border-color: #34d399;
+            color: #34d399;
+        }
+
+        /* Select */
+        select {
+            background: #0d1710;
+            border: 1px solid #1e3329;
+            color: #7a9e87;
+            outline: none;
+            cursor: pointer;
+        }
+        select:focus { border-color: #34d399; }
+        select option { background: #111a14; }
+
+        /* Nav item */
+        .nav-item {
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.04); }
+        .nav-item.active {
+            background: rgba(52,211,153,0.08);
+            border-left-color: #34d399;
+            color: #34d399;
+        }
+
+        /* Pulse dot */
+        .pulse-dot {
+            width: 8px; height: 8px;
+            background: #34d399;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Note textarea */
+        .note-area {
+            background: #0a1209;
+            border: 1px solid #1e3329;
+            color: #c5d8ca;
+            resize: none;
+            transition: border-color 0.2s;
+        }
+        .note-area:focus { outline: none; border-color: #34d399; }
+
+        /* Sortable th */
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { color: #34d399; }
+
+        /* Export btn */
+        .export-btn {
+            background: linear-gradient(135deg, #163825, #0f2a1a);
+            border: 1px solid #2d5a3d;
+            color: #34d399;
+            transition: all 0.2s;
+        }
+        .export-btn:hover { background: linear-gradient(135deg, #1e4a30, #163825); box-shadow: 0 0 15px rgba(52,211,153,0.15); }
+
+        /* Sync btn */
+        .sync-btn {
+            background: rgba(52,211,153,0.08);
+            border: 1px solid rgba(52,211,153,0.2);
+            color: #34d399;
+            transition: all 0.2s;
+        }
+        .sync-btn:hover { background: rgba(52,211,153,0.15); }
+
+        /* Chart container */
+        .chart-wrap { position: relative; height: 200px; }
+
+        /* Month tag */
+        .month-tag {
+            background: #1a0f0f;
+            border: 1px solid #3d1a1a;
+            color: #f87171;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        /* Logo accent */
+        .logo-ring {
+            background: linear-gradient(135deg, #163825, #0d2e1c);
+            border: 1px solid #2d5a3d;
+        }
+
+        /* Fade-in */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.3s ease forwards; }
+
+        /* Print */
+        @media print {
+            .sidebar, .no-print { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo, useEffect, useRef, useCallback } = React;
+
+const Icon = ({ name, size = 18, className = "" }) => (
+    <i data-lucide={name} className={className} style={{ width: size, height: size, display:'inline-block' }}></i>
+);
+
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEUAScY_WitIBOi5oqPCW0IV8-FE-8UMzV1PTaDZhYJrP9283ZIEp--4wNsLJJ5MX3skdScKj669H/pub?gid=0&single=true&output=csv';
+
+const MONTH_CONFIG = [
+    { name: "Marzo",          monthIndex: 2 },
+    { name: "Abril",          monthIndex: 3 },
+    { name: "Mayo",           monthIndex: 4 },
+    { name: "Junio",          monthIndex: 5 },
+    { name: "Mant. Junio",    monthIndex: 5 },
+    { name: "Julio",          monthIndex: 6 },
+    { name: "Agosto",         monthIndex: 7 },
+    { name: "Septiembre",     monthIndex: 8 },
+    { name: "Octubre",        monthIndex: 9 },
+    { name: "Noviembre",      monthIndex: 10 },
+    { name: "Mant. Noviembre",monthIndex: 10 },
+    { name: "Diciembre",      monthIndex: 11 }
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+    const now = new Date();
+    const currentMonth = now.getMonth();
+
+    return lines.slice(1).map((row, index) => {
+        const cols = [];
+        let cur = '', inQ = false;
+        for (let ch of row) {
+            if (ch === '"') inQ = !inQ;
+            else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+            else cur += ch;
+        }
+        cols.push(cur.trim());
+
+        const level        = cols[0] || "N/A";
+        const grade        = cols[1] || "S/D";
+        const studentName  = (cols[4] || "S/A").toUpperCase();
+        const inscripcion  = cols[9] || "";
+        const feeData      = cols.slice(11, 23);
+        const unpaidMonths = [];
+
+        feeData.forEach((val, idx) => {
+            const config = MONTH_CONFIG[idx];
+            if (!config) return;
+            const isPast  = config.monthIndex <= currentMonth;
+            const isEmpty = !val || val.trim() === "" || val.toLowerCase() === "debe";
+            if (isEmpty && isPast) unpaidMonths.push(config.name);
+        });
+
+        return {
+            id:               index,
+            level,
+            grade,
+            fullName:         studentName,
+            hasInscripcion:   inscripcion.trim() !== "",
+            unpaidMonthsList: unpaidMonths,
+            monthsOwed:       unpaidMonths.length
+        };
+    });
+}
+
+function getNotes() {
+    try { return JSON.parse(localStorage.getItem('leloir_notes') || '{}'); }
+    catch { return {}; }
+}
+function saveNote(id, text) {
+    const notes = getNotes();
+    notes[id] = text;
+    localStorage.setItem('leloir_notes', JSON.stringify(notes));
+}
+
+function exportCSV(data) {
+    const header = ['Nombre','Curso','Nivel','Inscripción','Cuotas Adeudadas','Estado','Meses Adeudados'];
+    const rows = data.map(f => [
+        f.fullName, f.grade, f.level,
+        f.hasInscripcion ? 'Pagada' : 'Pendiente',
+        f.monthsOwed,
+        f.monthsOwed === 0 ? 'Al Día' : f.monthsOwed < 3 ? 'Pendiente' : 'Mora Crítica',
+        f.unpaidMonthsList.join(' | ')
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `morosos_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+const StatusBadge = ({ months }) => {
+    if (months === 0) return <span className="badge-ok px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">Al Día</span>;
+    if (months < 3)  return <span className="badge-warn px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">Pendiente</span>;
+    return <span className="badge-crit px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">Mora Crítica</span>;
+};
+
+const MetricCard = ({ label, value, sub, accent, icon }) => (
+    <div className={`metric-card rounded-2xl p-6 flex flex-col gap-3 glow-green`} style={{borderLeftColor: accent, borderLeftWidth:'3px'}}>
+        <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{color: accent}}>{label}</p>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background: accent+'18'}}>
+                <Icon name={icon} size={16} className="" style={{color: accent}} />
+            </div>
+        </div>
+        <h3 className="text-4xl font-bold serif" style={{color: accent}}>{value}</h3>
+        <p className="text-[11px] text-slate-500">{sub}</p>
+    </div>
+);
+
+const DonutChart = ({ alDia, pendiente, criticos }) => {
+    const canvasRef = useRef(null);
+    const chartRef  = useRef(null);
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, {
+            type: 'doughnut',
+            data: {
+                labels: ['Al Día', 'Pendiente', 'Mora Crítica'],
+                datasets: [{
+                    data: [alDia, pendiente, criticos],
+                    backgroundColor: ['#163825','#2a1f0a','#2a0e0e'],
+                    borderColor:     ['#34d399','#fbbf24','#f87171'],
+                    borderWidth: 2,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                cutout: '72%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#7a9e87',
+                            font: { size: 11, family: 'DM Sans' },
+                            padding: 16,
+                            boxWidth: 10,
+                            boxHeight: 10
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#111a14',
+                        borderColor: '#1e3329',
+                        borderWidth: 1,
+                        titleColor: '#e8e8e0',
+                        bodyColor: '#7a9e87',
+                        padding: 10
+                    }
+                }
+            }
+        });
+        return () => chartRef.current?.destroy();
+    }, [alDia, pendiente, criticos]);
+
+    return (
+        <div className="metric-card rounded-2xl p-6" style={{borderLeftColor:'#34d399', borderLeftWidth:'3px'}}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-4">Distribución</p>
+            <div className="chart-wrap">
+                <canvas ref={canvasRef}></canvas>
+            </div>
+        </div>
+    );
+};
+
+const NoteField = ({ familyId }) => {
+    const [note, setNote] = useState(() => getNotes()[familyId] || '');
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = () => {
+        saveNote(familyId, note);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1800);
+    };
+
+    return (
+        <div className="mt-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">Notas internas</p>
+            <textarea
+                className="note-area w-full rounded-xl p-3 text-xs leading-relaxed"
+                rows={3}
+                placeholder="Ej: Llamó el 3/5, acordó pago para el viernes..."
+                value={note}
+                onChange={e => setNote(e.target.value)}
+            />
+            <button
+                onClick={handleSave}
+                className="mt-2 export-btn px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2"
+            >
+                <Icon name={saved ? 'check' : 'save'} size={13} />
+                {saved ? 'Guardado' : 'Guardar nota'}
+            </button>
+        </div>
+    );
+};
+
+const FamilyModal = ({ family, onClose }) => {
+    const notes = getNotes();
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="modal-backdrop absolute inset-0" onClick={onClose}></div>
+            <div className="modal-card relative w-full max-w-md rounded-3xl shadow-2xl p-8 fade-up">
+
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex gap-4 items-center">
+                        <div className="w-12 h-12 logo-ring rounded-2xl flex items-center justify-center text-emerald-400">
+                            <Icon name="user" size={22} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold serif text-emerald-100 leading-tight">{family.fullName}</h2>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">{family.grade} · {family.level}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-400">
+                        <Icon name="x" size={18} />
+                    </button>
+                </div>
+
+                <div className="flex gap-3 mb-6">
+                    <StatusBadge months={family.monthsOwed} />
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${family.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend'}`}>
+                        Inscripción {family.hasInscripcion ? 'Pagada' : 'Pendiente'}
+                    </span>
+                </div>
+
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Meses Adeudados</p>
+                {family.unpaidMonthsList.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {family.unpaidMonthsList.map((m, i) => (
+                            <div key={i} className="month-tag">
+                                <span>{m}</span>
+                                <Icon name="alert-circle" size={11} />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-8 text-center rounded-2xl" style={{background:'#0d2e1c', border:'1px solid #1a4a2e'}}>
+                        <Icon name="check-circle" size={28} className="mx-auto mb-2 text-emerald-400" />
+                        <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest">¡Sin deudas pendientes!</p>
+                    </div>
+                )}
+
+                <NoteField familyId={family.id} />
+
+                <p className="mt-6 text-[9px] text-center text-slate-600 border-t border-slate-800 pt-4">
+                    Solo se muestran meses transcurridos con celda vacía en la planilla.
+                </p>
+            </div>
+        </div>
+    );
+};
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+const App = () => {
+    const [families,        setFamilies]        = useState([]);
+    const [loading,         setLoading]         = useState(true);
+    const [lastSync,        setLastSync]        = useState(null);
+    const [searchTerm,      setSearchTerm]      = useState("");
+    const [filterStatus,    setFilterStatus]    = useState("todos");
+    const [filterInsc,      setFilterInsc]      = useState("todos");
+    const [filterGrade,     setFilterGrade]     = useState("todos");
+    const [sortCol,         setSortCol]         = useState("monthsOwed");
+    const [sortDir,         setSortDir]         = useState("desc");
+    const [selectedFamily,  setSelectedFamily]  = useState(null);
+
+    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const res  = await fetch(CSV_URL + '&t=' + Date.now());
+            const text = await res.text();
+            setFamilies(parseCSV(text));
+            setLastSync(new Date());
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const grades = useMemo(() => {
+        const set = new Set(families.map(f => f.grade).filter(Boolean));
+        return Array.from(set).sort();
+    }, [families]);
+
+    const metrics = useMemo(() => {
+        const total     = families.length;
+        const alDia     = families.filter(f => f.monthsOwed === 0).length;
+        const morosos   = families.filter(f => f.monthsOwed >= 3).length;
+        const pendiente = families.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3).length;
+        const totalM    = families.reduce((a,f) => a + f.monthsOwed, 0);
+        return { total, alDia, morosos, pendiente, totalM };
+    }, [families]);
+
+    const handleSort = col => {
+        if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortCol(col); setSortDir('asc'); }
+    };
+
+    const filtered = useMemo(() => {
+        let data = [...families];
+
+        if (searchTerm)
+            data = data.filter(f =>
+                f.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                f.grade.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+        if (filterStatus === 'aldia')    data = data.filter(f => f.monthsOwed === 0);
+        if (filterStatus === 'pend')     data = data.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3);
+        if (filterStatus === 'critico')  data = data.filter(f => f.monthsOwed >= 3);
+
+        if (filterInsc === 'pagada')     data = data.filter(f => f.hasInscripcion);
+        if (filterInsc === 'pendiente')  data = data.filter(f => !f.hasInscripcion);
+
+        if (filterGrade !== 'todos')     data = data.filter(f => f.grade === filterGrade);
+
+        data.sort((a, b) => {
+            let va = a[sortCol], vb = b[sortCol];
+            if (typeof va === 'string') va = va.toLowerCase();
+            if (typeof vb === 'string') vb = vb.toLowerCase();
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return data;
+    }, [families, searchTerm, filterStatus, filterInsc, filterGrade, sortCol, sortDir]);
+
+    const SortIcon = ({ col }) => {
+        if (sortCol !== col) return <Icon name="chevrons-up-down" size={12} className="inline ml-1 opacity-30" />;
+        return sortDir === 'asc'
+            ? <Icon name="chevron-up" size={12} className="inline ml-1 text-emerald-400" />
+            : <Icon name="chevron-down" size={12} className="inline ml-1 text-emerald-400" />;
+    };
+
+    const currentMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date());
+
+    return (
+        <div className="min-h-screen flex">
+            {/* Sidebar */}
+            <aside className="sidebar w-64 fixed h-full z-50 flex flex-col">
+                <div className="p-7 border-b border-emerald-900/30">
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="w-10 h-10 logo-ring rounded-xl flex items-center justify-center text-emerald-400">
+                            <Icon name="graduation-cap" size={20} />
+                        </div>
+                        <div>
+                            <span className="text-sm font-bold text-emerald-100 block leading-tight">Instituto Leloir</span>
+                            <span className="text-[9px] text-slate-500 uppercase tracking-widest">Gestión de Cobranzas</span>
+                        </div>
+                    </div>
+                </div>
+
+                <nav className="flex-1 px-4 py-6 space-y-1">
+                    <div className="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold">
+                        <Icon name="layout-dashboard" size={16} />
+                        Estado de Cuotas
+                    </div>
+                </nav>
+
+                {/* Sync */}
+                <div className="p-4 border-t border-emerald-900/30">
+                    {lastSync && (
+                        <p className="text-[9px] text-slate-600 text-center mb-3">
+                            Actualizado: {lastSync.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}
+                        </p>
+                    )}
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="sync-btn w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold no-print"
+                    >
+                        <Icon name="refresh-cw" size={14} className={loading ? "animate-spin" : ""} />
+                        {loading ? 'Sincronizando…' : 'Sincronizar Planilla'}
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main */}
+            <main className="flex-1 ml-64 p-8 max-w-[1400px]">
+
+                {/* Header */}
+                <header className="flex justify-between items-start mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold serif text-emerald-100">Control de Morosidad</h1>
+                        <p className="text-slate-500 text-sm mt-1">
+                            Deuda calculada al mes de <span className="text-emerald-400 font-semibold capitalize">{currentMonthName}</span>
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 no-print">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{background:'#0d2e1c', border:'1px solid #1a4a2e'}}>
+                            <div className="pulse-dot"></div>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">En línea</span>
+                        </div>
+                        <button
+                            onClick={() => exportCSV(filtered)}
+                            className="export-btn px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold"
+                        >
+                            <Icon name="download" size={15} />
+                            Exportar CSV
+                        </button>
+                    </div>
+                </header>
+
+                {/* Metrics */}
+                {loading ? (
+                    <div className="flex items-center justify-center h-48 text-slate-500 gap-3">
+                        <Icon name="loader" size={20} className="animate-spin text-emerald-400" />
+                        <span className="text-sm">Cargando datos desde la planilla…</span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <MetricCard label="Cuotas Vencidas"  value={metrics.totalM}   sub="Total a cobrar hoy"         accent="#34d399" icon="file-text" />
+                            <MetricCard label="Alumnos al Día"   value={metrics.alDia}    sub="Sin deudas a la fecha"      accent="#34d399" icon="check-circle" />
+                            <MetricCard label="Con Atraso"       value={metrics.pendiente} sub="Entre 1 y 2 cuotas"        accent="#fbbf24" icon="clock" />
+                            <MetricCard label="Mora Crítica"     value={metrics.morosos}  sub="+3 meses de atraso"         accent="#f87171" icon="alert-triangle" />
+                        </div>
+
+                        {/* Chart */}
+                        <div className="mb-8">
+                            <DonutChart alDia={metrics.alDia} pendiente={metrics.pendiente} criticos={metrics.morosos} />
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex flex-wrap gap-3 mb-4 no-print">
+                            {/* Search */}
+                            <div className="relative flex-1 min-w-[220px]">
+                                <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar alumno o curso…"
+                                    className="search-input w-full pl-9 pr-4 py-2.5 rounded-xl text-sm"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Status filter */}
+                            <div className="flex gap-1 items-center rounded-xl overflow-hidden border border-slate-800 p-1">
+                                {[['todos','Todos'],['aldia','Al Día'],['pend','Pendiente'],['critico','Crítico']].map(([v,l]) => (
+                                    <button
+                                        key={v}
+                                        className={`filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold ${filterStatus === v ? 'active' : ''}`}
+                                        onClick={() => setFilterStatus(v)}
+                                    >{l}</button>
+                                ))}
+                            </div>
+
+                            {/* Inscripción filter */}
+                            <select
+                                className="filter-btn rounded-xl px-3 py-2 text-xs font-semibold"
+                                value={filterInsc}
+                                onChange={e => setFilterInsc(e.target.value)}
+                            >
+                                <option value="todos">Inscripción: Todas</option>
+                                <option value="pagada">Inscripción Pagada</option>
+                                <option value="pendiente">Inscripción Pendiente</option>
+                            </select>
+
+                            {/* Grade filter */}
+                            <select
+                                className="filter-btn rounded-xl px-3 py-2 text-xs font-semibold"
+                                value={filterGrade}
+                                onChange={e => setFilterGrade(e.target.value)}
+                            >
+                                <option value="todos">Todos los cursos</option>
+                                {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Result count */}
+                        <p className="text-[11px] text-slate-600 mb-3">
+                            Mostrando <span className="text-emerald-400 font-bold">{filtered.length}</span> de {families.length} alumnos
+                        </p>
+
+                        {/* Table */}
+                        <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #1e3329'}}>
+                            <div className="overflow-x-auto">
+                                <table className="data-table w-full text-left text-sm">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase tracking-widest font-bold" style={{background:'#0d1710', color:'#3d5a47', borderBottom:'1px solid #1e3329'}}>
+                                            <th className="sortable px-6 py-4" onClick={() => handleSort('fullName')}>
+                                                Nombre y Apellido <SortIcon col="fullName" />
+                                            </th>
+                                            <th className="sortable px-4 py-4" onClick={() => handleSort('grade')}>
+                                                Curso <SortIcon col="grade" />
+                                            </th>
+                                            <th className="px-4 py-4 text-center">Inscripción</th>
+                                            <th className="sortable px-4 py-4 text-center" onClick={() => handleSort('monthsOwed')}>
+                                                Cuotas <SortIcon col="monthsOwed" />
+                                            </th>
+                                            <th className="px-4 py-4">Estado</th>
+                                            <th className="px-4 py-4 text-center no-print">Detalle</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filtered.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-12 text-center text-slate-600 text-sm">
+                                                    No se encontraron alumnos con esos filtros.
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {filtered.map(f => (
+                                            <tr key={f.id} onClick={() => setSelectedFamily(f)}>
+                                                <td className="px-6 py-4 font-semibold text-emerald-100 text-sm">{f.fullName}</td>
+                                                <td className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase">{f.grade}</td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${f.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend'}`}>
+                                                        {f.hasInscripcion ? 'Pagada' : 'Pendiente'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center">
+                                                    <span className="text-xl font-bold serif" style={{color: f.monthsOwed === 0 ? '#34d399' : f.monthsOwed < 3 ? '#fbbf24' : '#f87171'}}>
+                                                        {f.monthsOwed}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4"><StatusBadge months={f.monthsOwed} /></td>
+                                                <td className="px-4 py-4 text-center no-print">
+                                                    <button className="p-2 rounded-lg hover:bg-emerald-900/30 text-slate-500 hover:text-emerald-400 transition-colors" onClick={e => { e.stopPropagation(); setSelectedFamily(f); }}>
+                                                        <Icon name="eye" size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <p className="text-[10px] text-slate-700 text-center mt-6">
+                            Instituto Leloir · Sistema de Gestión de Cobranzas · {new Date().getFullYear()}
+                        </p>
+                    </>
+                )}
+            </main>
+
+            {selectedFamily && (
+                <FamilyModal family={selectedFamily} onClose={() => setSelectedFamily(null)} />
+            )}
+        </div>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
