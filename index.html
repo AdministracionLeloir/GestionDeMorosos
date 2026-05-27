@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión — Instituto Leloir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base:        #080f0b;
+            --bg-surface:     #0d1710;
+            --bg-card:        #101a13;
+            --bg-hover:       #141e18;
+            --border-subtle:  #1a2e20;
+            --border-active:  #2d5a3d;
+            --green-bright:   #34d399;
+            --yellow-bright:  #fbbf24;
+            --red-bright:     #f87171;
+            --text-primary:   #e8ede9;
+            --text-secondary: #7a9e87;
+            --text-muted:     #3d5a47;
+            --sidebar-w:      260px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e3329; border-radius: 10px; }
+        .serif { font-family: 'DM Serif Display', serif; }
+
+        /* ── Spin animation ── */
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
+
+        /* ── Fade animations ── */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in { animation: fadeIn 0.2s ease forwards; }
+
+        /* ── Pulse ── */
+        .pulse-dot { width: 7px; height: 7px; background: var(--green-bright); border-radius: 50%; animation: pulse-anim 2.5s infinite; }
+        @keyframes pulse-anim { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.75); } }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: linear-gradient(180deg, #0a1810 0%, #060e09 100%);
+            border-right: 1px solid var(--border-subtle);
+            position: fixed; top: 0; left: 0; bottom: 0;
+            display: flex; flex-direction: column; z-index: 50;
+        }
+        .logo-ring { background: linear-gradient(135deg, #163825, #0d2e1c); border: 1px solid #2d5a3d; }
+
+        .nav-section-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+            color: var(--text-muted); padding: 16px 14px 6px;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 10px;
+            font-size: 13px; font-weight: 500; color: var(--text-secondary);
+            cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+        .nav-item.active { background: rgba(52,211,153,0.09); border-left-color: var(--green-bright); color: var(--green-bright); }
+
+        /* ── Main ── */
+        .main-content { margin-left: var(--sidebar-w); min-height: 100vh; padding: 32px; max-width: 1400px; }
+
+        /* ── Cards ── */
+        .metric-card {
+            background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px;
+            padding: 22px; transition: transform 0.2s, border-color 0.2s; position: relative; overflow: hidden;
+        }
+        .metric-card:hover { transform: translateY(-2px); border-color: var(--border-active); }
+
+        /* ── Table ── */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table thead tr { background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); }
+        .data-table thead th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 14px 18px; }
+        .data-table tbody tr { border-bottom: 1px solid #0f1912; transition: background 0.12s; cursor: pointer; }
+        .data-table tbody tr:hover { background: var(--bg-hover); }
+        .data-table tbody td { padding: 13px 18px; font-size: 13px; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { color: var(--green-bright); }
+        .table-wrapper { border: 1px solid var(--border-subtle); border-radius: 14px; overflow: hidden; }
+
+        /* ── Badges ── */
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+        .badge-ok   { background: #0a2718; color: var(--green-bright); border: 1px solid #154a2a; }
+        .badge-warn { background: #2a1f0a; color: var(--yellow-bright); border: 1px solid #4a3510; }
+        .badge-crit { background: #2a0e0e; color: var(--red-bright); border: 1px solid #4a1818; }
+        .badge-insc-ok   { background: #0a2718; color: var(--green-bright); border: 1px solid #154a2a; }
+        .badge-insc-pend { background: #2a0e0e; color: var(--red-bright); border: 1px solid #4a1818; }
+
+        /* ── Inputs ── */
+        .search-wrap { position: relative; flex: 1; min-width: 220px; }
+        .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; width: 14px; height: 14px; }
+        .search-input {
+            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-primary);
+            border-radius: 10px; padding: 9px 12px 9px 36px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+            outline: none; width: 100%; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus { border-color: var(--green-bright); box-shadow: 0 0 0 3px rgba(52,211,153,0.08); }
+        .search-input::placeholder { color: var(--text-muted); }
+
+        .filter-btn {
+            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
+            padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: all 0.12s; font-family: 'DM Sans', sans-serif;
+        }
+        .filter-btn:hover { border-color: var(--border-active); color: var(--text-primary); }
+        .filter-btn.active { background: rgba(52,211,153,0.1); border-color: var(--green-bright); color: var(--green-bright); }
+
+        select.filter-select {
+            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
+            padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+            outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s;
+        }
+        select.filter-select:focus { border-color: var(--green-bright); }
+        select.filter-select option { background: #111a14; }
+
+        /* ── Buttons ── */
+        .btn-primary {
+            background: linear-gradient(135deg, #163825, #0f2a1a); border: 1px solid var(--border-active);
+            color: var(--green-bright); padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .btn-primary:hover { background: linear-gradient(135deg, #1e4a30, #163825); box-shadow: 0 0 20px rgba(52,211,153,0.15); }
+
+        .btn-secondary {
+            background: rgba(52,211,153,0.07); border: 1px solid rgba(52,211,153,0.18);
+            color: var(--green-bright); padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .btn-secondary:hover { background: rgba(52,211,153,0.12); }
+        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Modal ── */
+        .modal-backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
+        .modal-card {
+            background: linear-gradient(145deg, #0f1a13, #0a1209);
+            border: 1px solid var(--border-subtle); border-radius: 20px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+        }
+
+        /* ── Month tags ── */
+        .month-tag {
+            background: #180b0b; border: 1px solid #3d1a1a; color: var(--red-bright);
+            border-radius: 8px; padding: 7px 12px; font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            display: flex; align-items: center; justify-content: space-between; gap: 6px;
+        }
+
+        /* ── Note / contact inputs ── */
+        .note-area {
+            background: #090f0b; border: 1px solid var(--border-subtle); color: #c5d8ca;
+            border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.6;
+            resize: none; width: 100%; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
+        }
+        .note-area:focus { outline: none; border-color: var(--green-bright); }
+        .note-area::placeholder { color: var(--text-muted); }
+
+        .contact-input {
+            background: #090f0b; border: 1px solid var(--border-subtle); border-radius: 8px;
+            padding: 9px 12px; color: var(--text-primary); font-size: 12px;
+            font-family: 'DM Sans', sans-serif; width: 100%; outline: none; transition: border-color 0.2s;
+        }
+        .contact-input:focus { border-color: var(--green-bright); }
+        .contact-input::placeholder { color: var(--text-muted); }
+
+        /* ── Stat pill ── */
+        .stat-pill { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 14px; text-align: center; }
+
+        /* ── Tab bar ── */
+        .tab-bar { display: flex; gap: 4px; background: var(--bg-surface); padding: 4px; border-radius: 10px; margin-bottom: 16px; }
+        .tab-btn { flex: 1; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; background: transparent; border: none; font-family: 'DM Sans', sans-serif; }
+        .tab-btn.active { background: rgba(52,211,153,0.1); color: var(--green-bright); }
+        .tab-btn:hover:not(.active) { color: var(--text-secondary); }
+
+        /* ── Sidebar mini summary ── */
+        .sidebar-summary { padding: 10px 14px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+        .sidebar-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .sidebar-row:last-child { margin-bottom: 0; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: #0d2e1c; border: 1px solid #1a4a2e; color: var(--green-bright);
+            padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+            z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: fadeUp 0.3s ease forwards;
+        }
+
+        /* ── Section divider ── */
+        .section-divider { border: none; border-top: 1px solid var(--border-subtle); margin: 24px 0; }
+
+        /* ── Empty state ── */
+        .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); }
+
+        /* ── Icon color helpers ── */
+        .icon-green { color: var(--green-bright); }
+        .icon-muted { color: var(--text-muted); }
+        .icon-red   { color: var(--red-bright); }
+
+        /* ── Print ── */
+        @media print {
+            .sidebar, .no-print { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 16px; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect, useRef } = React;
+
+// ── Lucide Icon component ─────────────────────────────────────────────────────
+const Icon = ({ name, size = 18, className = "" }) => (
+    <i data-lucide={name} className={className}
+       style={{ width: size, height: size, display: 'inline-block', flexShrink: 0 }}></i>
+);
+
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEUAScY_WitIBOi5oqPCW0IV8-FE-8UMzV1PTaDZhYJrP9283ZIEp--4wNsLJJ5MX3skdScKj669H/pub?gid=0&single=true&output=csv';
+
+const MONTH_CONFIG = [
+    { name: "Marzo",           monthIndex: 2  },
+    { name: "Abril",           monthIndex: 3  },
+    { name: "Mayo",            monthIndex: 4  },
+    { name: "Junio",           monthIndex: 5  },
+    { name: "Mant. Junio",     monthIndex: 5  },
+    { name: "Julio",           monthIndex: 6  },
+    { name: "Agosto",          monthIndex: 7  },
+    { name: "Septiembre",      monthIndex: 8  },
+    { name: "Octubre",         monthIndex: 9  },
+    { name: "Noviembre",       monthIndex: 10 },
+    { name: "Mant. Noviembre", monthIndex: 10 },
+    { name: "Diciembre",       monthIndex: 11 }
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+    const currentMonth = new Date().getMonth();
+
+    return lines.slice(1).map((row, index) => {
+        const cols = [];
+        let cur = '', inQ = false;
+        for (let ch of row) {
+            if (ch === '"') inQ = !inQ;
+            else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+            else cur += ch;
+        }
+        cols.push(cur.trim());
+
+        const level       = cols[0]  || "N/A";
+        const grade       = cols[1]  || "S/D";
+        const studentName = (cols[4] || "S/A").toUpperCase();
+        const inscripcion = cols[9]  || "";
+        const feeData     = cols.slice(11, 23);
+        const unpaidMonths = [];
+        const paidMonths   = [];
+
+        feeData.forEach((val, idx) => {
+            const config = MONTH_CONFIG[idx];
+            if (!config) return;
+            const isPast  = config.monthIndex <= currentMonth;
+            const isEmpty = !val || val.trim() === "" || val.toLowerCase() === "debe";
+            if (isPast) {
+                if (isEmpty) unpaidMonths.push(config.name);
+                else paidMonths.push(config.name);
+            }
+        });
+
+        return {
+            id: index, level, grade,
+            fullName:         studentName,
+            hasInscripcion:   inscripcion.trim() !== "",
+            unpaidMonthsList: unpaidMonths,
+            paidMonthsList:   paidMonths,
+            monthsOwed:       unpaidMonths.length,
+            monthsPaid:       paidMonths.length,
+        };
+    }).filter(f => f.fullName !== "S/A");
+}
+
+function getNotes() {
+    try { return JSON.parse(localStorage.getItem('leloir_notes') || '{}'); } catch { return {}; }
+}
+function saveNote(id, text) {
+    const notes = getNotes(); notes[id] = text;
+    localStorage.setItem('leloir_notes', JSON.stringify(notes));
+}
+function getContacts() {
+    try { return JSON.parse(localStorage.getItem('leloir_contacts') || '{}'); } catch { return {}; }
+}
+function saveContact(id, data) {
+    const c = getContacts(); c[id] = data;
+    localStorage.setItem('leloir_contacts', JSON.stringify(c));
+}
+
+function exportCSV(data) {
+    const header = ['Nombre','Curso','Nivel','Inscripción','Cuotas Adeudadas','Estado','Meses Adeudados'];
+    const rows = data.map(f => [
+        f.fullName, f.grade, f.level,
+        f.hasInscripcion ? 'Pagada' : 'Pendiente',
+        f.monthsOwed,
+        f.monthsOwed === 0 ? 'Al Día' : f.monthsOwed < 3 ? 'Pendiente' : 'Mora Crítica',
+        f.unpaidMonthsList.join(' | ')
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `leloir_cobranzas_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+function getStatusInfo(months) {
+    if (months === 0) return { label: 'Al Día',      css: 'badge-ok',   color: '#34d399' };
+    if (months < 3)   return { label: 'Pendiente',   css: 'badge-warn', color: '#fbbf24' };
+    return                   { label: 'Mora Crítica', css: 'badge-crit', color: '#f87171' };
+}
+
+const StatusBadge = ({ months }) => {
+    const s = getStatusInfo(months);
+    return <span className={"badge " + s.css}>{s.label}</span>;
+};
+
+// ── Metric Card ───────────────────────────────────────────────────────────────
+const MetricCard = ({ label, value, sub, accent, icon }) => (
+    <div className="metric-card" style={{ borderTop: '2px solid ' + accent }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: accent }}>{label}</p>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent }}>
+                <Icon name={icon} size={15} />
+            </div>
+        </div>
+        <h3 className="serif" style={{ fontSize: 42, fontWeight: 700, color: accent, lineHeight: 1, marginBottom: 8 }}>{value}</h3>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{sub}</p>
+    </div>
+);
+
+// ── Donut Chart ───────────────────────────────────────────────────────────────
+const DonutChart = ({ alDia, pendiente, criticos }) => {
+    const canvasRef = useRef(null);
+    const chartRef  = useRef(null);
+    const total = alDia + pendiente + criticos;
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, {
+            type: 'doughnut',
+            data: {
+                labels: ['Al Día', 'Pendiente', 'Mora Crítica'],
+                datasets: [{
+                    data: [alDia, pendiente, criticos],
+                    backgroundColor: ['#0a2718', '#2a1f0a', '#2a0e0e'],
+                    borderColor:     ['#34d399', '#fbbf24', '#f87171'],
+                    borderWidth: 2, hoverOffset: 8
+                }]
+            },
+            options: {
+                cutout: '74%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#7a9e87', font: { size: 11, family: 'DM Sans' },
+                            padding: 16, boxWidth: 10, boxHeight: 10,
+                            usePointStyle: true, pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#111a14', borderColor: '#1e3329', borderWidth: 1,
+                        titleColor: '#e8e8e0', bodyColor: '#7a9e87', padding: 12,
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed} alumnos (${total ? Math.round(ctx.parsed / total * 100) : 0}%)`
+                        }
+                    }
+                }
+            }
+        });
+        return () => chartRef.current && chartRef.current.destroy();
+    }, [alDia, pendiente, criticos]);
+
+    return (
+        <div className="metric-card" style={{ borderTop: '2px solid #34d399' }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#34d399', marginBottom: 16 }}>Distribución</p>
+            <div style={{ position: 'relative', height: 200 }}>
+                <canvas ref={canvasRef}></canvas>
+            </div>
+        </div>
+    );
+};
+
+// ── Note Field ────────────────────────────────────────────────────────────────
+const NoteField = ({ familyId }) => {
+    const [note, setNote]   = useState(() => getNotes()[familyId] || '');
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = () => {
+        saveNote(familyId, note);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1800);
+    };
+
+    return (
+        <div>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(52,211,153,0.5)', marginBottom: 8 }}>
+                Notas internas
+            </p>
+            <textarea
+                className="note-area" rows={3}
+                placeholder="Ej: Llamó el 3/5, acordó pago para el viernes…"
+                value={note}
+                onChange={e => setNote(e.target.value)}
+            />
+            <button onClick={handleSave} className="btn-primary" style={{ marginTop: 8, fontSize: 12 }}>
+                <Icon name={saved ? 'check' : 'save'} size={13} />
+                {saved ? 'Guardado' : 'Guardar nota'}
+            </button>
+        </div>
+    );
+};
+
+// ── Contact Field ─────────────────────────────────────────────────────────────
+const ContactField = ({ familyId }) => {
+    const stored = getContacts()[familyId] || { phone: '', email: '' };
+    const [phone, setPhone] = useState(stored.phone);
+    const [email, setEmail] = useState(stored.email);
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = () => {
+        saveContact(familyId, { phone, email });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1800);
+    };
+
+    return (
+        <div>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(52,211,153,0.5)', marginBottom: 10 }}>
+                Datos de contacto
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input
+                    type="tel" className="contact-input"
+                    placeholder="Teléfono"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                />
+                <input
+                    type="email" className="contact-input"
+                    placeholder="Email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                />
+                <button onClick={handleSave} className="btn-primary" style={{ fontSize: 12, alignSelf: 'flex-start' }}>
+                    <Icon name={saved ? 'check' : 'save'} size={12} />
+                    {saved ? 'Guardado' : 'Guardar'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ── Family Modal ──────────────────────────────────────────────────────────────
+const FamilyModal = ({ family, onClose }) => {
+    const [tab, setTab] = useState('deuda');
+    const st = getStatusInfo(family.monthsOwed);
+    const total = family.monthsPaid + family.monthsOwed;
+    const pct   = total > 0 ? Math.round(family.monthsPaid / total * 100) : 100;
+
+    useEffect(() => {
+        const handler = e => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div className="modal-backdrop" style={{ position: 'absolute', inset: 0 }} onClick={onClose}></div>
+            <div className="modal-card fade-up" style={{ position: 'relative', width: '100%', maxWidth: 460, padding: 28 }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                        <div className="logo-ring" style={{ width: 46, height: 46, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ color: '#34d399' }}><Icon name="user" size={20} /></span>
+                        </div>
+                        <div>
+                            <h2 className="serif" style={{ fontSize: 17, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 3 }}>{family.fullName}</h2>
+                            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                {family.grade} · {family.level}
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                        <Icon name="x" size={18} />
+                    </button>
+                </div>
+
+                {/* Badges */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+                    <StatusBadge months={family.monthsOwed} />
+                    <span className={"badge " + (family.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend')}>
+                        Inscripción {family.hasInscripcion ? 'Pagada' : 'Pendiente'}
+                    </span>
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 18 }}>
+                    <div className="stat-pill">
+                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: st.color }}>{family.monthsOwed}</p>
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Adeudadas</p>
+                    </div>
+                    <div className="stat-pill">
+                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: '#34d399' }}>{family.monthsPaid}</p>
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Pagadas</p>
+                    </div>
+                    <div className="stat-pill">
+                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-secondary)' }}>{pct}%</p>
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Al día</p>
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="tab-bar">
+                    {[['deuda', 'Cuotas'], ['notas', 'Notas'], ['contacto', 'Contacto']].map(([id, label]) => (
+                        <button key={id} className={"tab-btn" + (tab === id ? ' active' : '')} onClick={() => setTab(id)}>{label}</button>
+                    ))}
+                </div>
+
+                {/* Tab content */}
+                <div key={tab} className="fade-in">
+                    {tab === 'deuda' && (
+                        <>
+                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 10 }}>Meses adeudados</p>
+                            {family.unpaidMonthsList.length > 0 ? (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                                    {family.unpaidMonthsList.map((m, i) => (
+                                        <div key={i} className="month-tag">
+                                            <span>{m}</span>
+                                            <Icon name="alert-circle" size={11} />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ padding: '28px 0', textAlign: 'center', background: '#0a2718', border: '1px solid #154a2a', borderRadius: 12 }}>
+                                    <span style={{ color: '#34d399', display: 'block', marginBottom: 8 }}><Icon name="check-circle" size={26} /></span>
+                                    <p style={{ fontSize: 11, color: '#34d399', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>¡Sin deudas pendientes!</p>
+                                </div>
+                            )}
+                            <p style={{ marginTop: 14, fontSize: 9, color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                                Solo se muestran meses transcurridos con celda vacía en la planilla.
+                            </p>
+                        </>
+                    )}
+                    {tab === 'notas'    && <NoteField familyId={family.id} />}
+                    {tab === 'contacto' && <ContactField familyId={family.id} />}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+const Toast = ({ message, onDone }) => {
+    useEffect(() => {
+        const t = setTimeout(onDone, 2200);
+        return () => clearTimeout(t);
+    }, []);
+    return (
+        <div className="toast">
+            <Icon name="check-circle" size={15} />
+            {message}
+        </div>
+    );
+};
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+const App = () => {
+    const [families,       setFamilies]       = useState([]);
+    const [loading,        setLoading]        = useState(true);
+    const [error,          setError]          = useState(null);
+    const [lastSync,       setLastSync]       = useState(null);
+    const [searchTerm,     setSearchTerm]     = useState("");
+    const [filterStatus,   setFilterStatus]   = useState("todos");
+    const [filterInsc,     setFilterInsc]     = useState("todos");
+    const [filterGrade,    setFilterGrade]    = useState("todos");
+    const [filterLevel,    setFilterLevel]    = useState("todos");
+    const [sortCol,        setSortCol]        = useState("monthsOwed");
+    const [sortDir,        setSortDir]        = useState("desc");
+    const [selectedFamily, setSelectedFamily] = useState(null);
+    const [toast,          setToast]          = useState(null);
+
+    // Run lucide icon rendering after every React render
+    useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
+
+    useEffect(() => { fetchData(); }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res  = await fetch(CSV_URL + '&t=' + Date.now());
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            setFamilies(parseCSV(text));
+            setLastSync(new Date());
+            setToast('Planilla sincronizada correctamente');
+        } catch (e) {
+            setError('No se pudo conectar con la planilla. Verificá tu conexión.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const grades = useMemo(() => Array.from(new Set(families.map(f => f.grade).filter(Boolean))).sort(), [families]);
+    const levels = useMemo(() => Array.from(new Set(families.map(f => f.level).filter(Boolean))).sort(), [families]);
+
+    const metrics = useMemo(() => {
+        const alDia     = families.filter(f => f.monthsOwed === 0).length;
+        const morosos   = families.filter(f => f.monthsOwed >= 3).length;
+        const pendiente = families.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3).length;
+        const totalM    = families.reduce((a, f) => a + f.monthsOwed, 0);
+        return { total: families.length, alDia, morosos, pendiente, totalM };
+    }, [families]);
+
+    const handleSort = col => {
+        if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortCol(col); setSortDir('asc'); }
+    };
+
+    const filtered = useMemo(() => {
+        let data = [...families];
+        const q = searchTerm.toLowerCase();
+        if (q) data = data.filter(f =>
+            f.fullName.toLowerCase().includes(q) ||
+            f.grade.toLowerCase().includes(q) ||
+            f.level.toLowerCase().includes(q)
+        );
+        if (filterStatus === 'aldia')   data = data.filter(f => f.monthsOwed === 0);
+        if (filterStatus === 'pend')    data = data.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3);
+        if (filterStatus === 'critico') data = data.filter(f => f.monthsOwed >= 3);
+        if (filterInsc === 'pagada')    data = data.filter(f => f.hasInscripcion);
+        if (filterInsc === 'pendiente') data = data.filter(f => !f.hasInscripcion);
+        if (filterGrade !== 'todos')    data = data.filter(f => f.grade === filterGrade);
+        if (filterLevel !== 'todos')    data = data.filter(f => f.level === filterLevel);
+        data.sort((a, b) => {
+            let va = a[sortCol], vb = b[sortCol];
+            if (typeof va === 'string') va = va.toLowerCase();
+            if (typeof vb === 'string') vb = vb.toLowerCase();
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return data;
+    }, [families, searchTerm, filterStatus, filterInsc, filterGrade, filterLevel, sortCol, sortDir]);
+
+    const SortIcon = ({ col }) => {
+        if (sortCol !== col) return <Icon name="chevrons-up-down" size={12} className="inline ml-1" />;
+        return sortDir === 'asc'
+            ? <Icon name="chevron-up"   size={12} className="inline ml-1 text-emerald-400" />
+            : <Icon name="chevron-down" size={12} className="inline ml-1 text-emerald-400" />;
+    };
+
+    const clearFilters = () => {
+        setSearchTerm(""); setFilterStatus("todos");
+        setFilterInsc("todos"); setFilterGrade("todos"); setFilterLevel("todos");
+    };
+    const hasFilters = searchTerm || filterStatus !== 'todos' || filterInsc !== 'todos' || filterGrade !== 'todos' || filterLevel !== 'todos';
+
+    const currentMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date());
+
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex' }}>
+
+            {/* ── Sidebar ── */}
+            <aside className="sidebar">
+                <div style={{ padding: 24, borderBottom: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div className="logo-ring" style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ color: '#34d399' }}><Icon name="graduation-cap" size={19} /></span>
+                        </div>
+                        <div>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>Instituto Leloir</span>
+                            <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Gestión de Cobranzas</span>
+                        </div>
+                    </div>
+                </div>
+
+                <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+                    <div className="nav-section-label">Panel</div>
+                    <div className="nav-item active">
+                        <Icon name="layout-dashboard" size={15} />
+                        Estado de Cuotas
+                    </div>
+
+                    {families.length > 0 && (
+                        <>
+                            <div className="nav-section-label" style={{ marginTop: 16 }}>Resumen rápido</div>
+                            <div className="sidebar-summary">
+                                <div className="sidebar-row">
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{metrics.total}</span>
+                                </div>
+                                <div className="sidebar-row">
+                                    <span style={{ fontSize: 11, color: '#34d399' }}>Al día</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#34d399' }}>{metrics.alDia}</span>
+                                </div>
+                                <div className="sidebar-row">
+                                    <span style={{ fontSize: 11, color: '#fbbf24' }}>Pendientes</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24' }}>{metrics.pendiente}</span>
+                                </div>
+                                <div className="sidebar-row">
+                                    <span style={{ fontSize: 11, color: '#f87171' }}>Mora crítica</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f87171' }}>{metrics.morosos}</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </nav>
+
+                <div style={{ padding: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                    {lastSync && (
+                        <p style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
+                            Actualizado: {lastSync.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                    )}
+                    <button onClick={fetchData} disabled={loading} className="btn-secondary no-print" style={{ width: '100%', justifyContent: 'center' }}>
+                        <Icon name="refresh-cw" size={13} className={loading ? 'spin' : ''} />
+                        {loading ? 'Sincronizando…' : 'Sincronizar'}
+                    </button>
+                </div>
+            </aside>
+
+            {/* ── Main ── */}
+            <main className="main-content">
+
+                {/* Header */}
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }} className="no-print">
+                    <div>
+                        <h1 className="serif" style={{ fontSize: 28, color: 'var(--text-primary)', fontWeight: 700, marginBottom: 4 }}>Control de Morosidad</h1>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                            Deuda calculada al mes de{' '}
+                            <span style={{ color: '#34d399', fontWeight: 600, textTransform: 'capitalize' }}>{currentMonthName}</span>
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, background: '#0a2718', border: '1px solid #154a2a' }}>
+                            <div className="pulse-dot"></div>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em' }}>En línea</span>
+                        </div>
+                        <button onClick={() => exportCSV(filtered)} className="btn-primary">
+                            <Icon name="download" size={14} />
+                            Exportar CSV
+                        </button>
+                    </div>
+                </header>
+
+                {loading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: 'var(--text-muted)' }}>
+                        <span style={{ color: '#34d399' }}><Icon name="loader" size={20} className="spin" /></span>
+                        <span style={{ fontSize: 13 }}>Cargando datos desde la planilla…</span>
+                    </div>
+                ) : error ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: 48, background: '#180b0b', border: '1px solid #3d1a1a', borderRadius: 16, textAlign: 'center' }}>
+                        <span style={{ color: '#f87171' }}><Icon name="wifi-off" size={32} /></span>
+                        <p style={{ fontSize: 13, color: '#f87171', fontWeight: 600 }}>{error}</p>
+                        <button onClick={fetchData} className="btn-primary">
+                            <Icon name="refresh-cw" size={14} />
+                            Reintentar
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Metric cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: 14, marginBottom: 24 }}>
+                            <MetricCard label="Cuotas Vencidas"  value={metrics.totalM}    sub="Total acumulado"       accent="#34d399" icon="file-text"      />
+                            <MetricCard label="Alumnos al Día"   value={metrics.alDia}     sub="Sin deudas a la fecha" accent="#34d399" icon="check-circle"   />
+                            <MetricCard label="Con Atraso"       value={metrics.pendiente} sub="Entre 1 y 2 cuotas"    accent="#fbbf24" icon="clock"          />
+                            <MetricCard label="Mora Crítica"     value={metrics.morosos}   sub="+3 meses de atraso"    accent="#f87171" icon="alert-triangle" />
+                            <DonutChart alDia={metrics.alDia} pendiente={metrics.pendiente} criticos={metrics.morosos} />
+                        </div>
+
+                        <hr className="section-divider" />
+
+                        {/* Filters */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }} className="no-print">
+                            <div className="search-wrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Buscar alumno, curso o nivel…"
+                                    className="search-input"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 3, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 3 }}>
+                                {[['todos', 'Todos'], ['aldia', 'Al Día'], ['pend', 'Pendiente'], ['critico', 'Crítico']].map(([v, l]) => (
+                                    <button key={v} className={"filter-btn" + (filterStatus === v ? ' active' : '')} onClick={() => setFilterStatus(v)}>{l}</button>
+                                ))}
+                            </div>
+
+                            <select className="filter-select" value={filterInsc} onChange={e => setFilterInsc(e.target.value)}>
+                                <option value="todos">Inscripción: Todas</option>
+                                <option value="pagada">Inscripción Pagada</option>
+                                <option value="pendiente">Inscripción Pendiente</option>
+                            </select>
+
+                            <select className="filter-select" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
+                                <option value="todos">Todos los niveles</option>
+                                {levels.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+
+                            <select className="filter-select" value={filterGrade} onChange={e => setFilterGrade(e.target.value)}>
+                                <option value="todos">Todos los cursos</option>
+                                {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                            </select>
+
+                            {hasFilters && (
+                                <button onClick={clearFilters} className="filter-btn" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <Icon name="x" size={12} />
+                                    Limpiar
+                                </button>
+                            )}
+                        </div>
+
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                            Mostrando <span style={{ color: '#34d399', fontWeight: 700 }}>{filtered.length}</span> de {families.length} alumnos
+                            {hasFilters && <span> · filtros activos</span>}
+                        </p>
+
+                        {/* Table */}
+                        <div className="table-wrapper">
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('fullName')}>
+                                                Nombre y Apellido <SortIcon col="fullName" />
+                                            </th>
+                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('grade')}>
+                                                Curso <SortIcon col="grade" />
+                                            </th>
+                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('level')}>
+                                                Nivel <SortIcon col="level" />
+                                            </th>
+                                            <th style={{ textAlign: 'center' }}>Inscripción</th>
+                                            <th className="sortable" style={{ textAlign: 'center' }} onClick={() => handleSort('monthsOwed')}>
+                                                Cuotas <SortIcon col="monthsOwed" />
+                                            </th>
+                                            <th>Estado</th>
+                                            <th style={{ textAlign: 'center' }} className="no-print">Detalle</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filtered.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7}>
+                                                    <div className="empty-state">
+                                                        <span style={{ display: 'block', marginBottom: 10 }}><Icon name="search-x" size={28} /></span>
+                                                        <p style={{ fontSize: 13, marginBottom: 8 }}>No se encontraron alumnos con esos filtros</p>
+                                                        {hasFilters && (
+                                                            <button onClick={clearFilters} className="btn-primary" style={{ margin: '0 auto', fontSize: 12 }}>
+                                                                Limpiar filtros
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : filtered.map(f => {
+                                            const st = getStatusInfo(f.monthsOwed);
+                                            return (
+                                                <tr key={f.id} onClick={() => setSelectedFamily(f)}>
+                                                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{f.fullName}</td>
+                                                    <td style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.grade}</td>
+                                                    <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.level}</td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <span className={"badge " + (f.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend')}>
+                                                            {f.hasInscripcion ? 'Pagada' : 'Pendiente'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <span className="serif" style={{ fontSize: 22, fontWeight: 700, color: st.color }}>{f.monthsOwed}</span>
+                                                    </td>
+                                                    <td><StatusBadge months={f.monthsOwed} /></td>
+                                                    <td style={{ textAlign: 'center' }} className="no-print">
+                                                        <button
+                                                            style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                                                            onClick={e => { e.stopPropagation(); setSelectedFamily(f); }}
+                                                        >
+                                                            <Icon name="eye" size={14} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 24 }}>
+                            Instituto Leloir · Sistema de Gestión de Cobranzas · {new Date().getFullYear()}
+                        </p>
+                    </>
+                )}
+            </main>
+
+            {selectedFamily && <FamilyModal family={selectedFamily} onClose={() => setSelectedFamily(null)} />}
+            {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+        </div>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
