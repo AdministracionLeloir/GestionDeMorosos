@@ -4,911 +4,683 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestión — Instituto Leloir</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base:        #080f0b;
-            --bg-surface:     #0d1710;
-            --bg-card:        #101a13;
-            --bg-hover:       #141e18;
-            --border-subtle:  #1a2e20;
-            --border-active:  #2d5a3d;
-            --green-bright:   #34d399;
-            --yellow-bright:  #fbbf24;
-            --red-bright:     #f87171;
-            --text-primary:   #e8ede9;
-            --text-secondary: #7a9e87;
-            --text-muted:     #3d5a47;
-            --sidebar-w:      260px;
+            --bg:      #080f0b;
+            --surface: #0d1710;
+            --card:    #101a13;
+            --hover:   #141e18;
+            --b0:      #1a2e20;
+            --b1:      #2d5a3d;
+            --green:   #34d399;
+            --yellow:  #fbbf24;
+            --red:     #f87171;
+            --t0:      #e8ede9;
+            --t1:      #7a9e87;
+            --t2:      #3d5a47;
+            --sw:      260px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1e3329; border-radius: 10px; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t0); min-height: 100vh; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #1e3329; border-radius: 4px; }
         .serif { font-family: 'DM Serif Display', serif; }
 
-        /* ── Spin animation ── */
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes fadeUp  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+        @keyframes pulse-k { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.75);} }
+        .spin     { animation: spin 1s linear infinite; display:inline-block; }
+        .fade-up  { animation: fadeUp .28s ease both; }
+        .fade-in  { animation: fadeIn .2s ease both; }
+        .pulse-dot{ width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse-k 2.5s infinite; }
 
-        /* ── Fade animations ── */
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-up { animation: fadeUp 0.3s ease forwards; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .fade-in { animation: fadeIn 0.2s ease forwards; }
-
-        /* ── Pulse ── */
-        .pulse-dot { width: 7px; height: 7px; background: var(--green-bright); border-radius: 50%; animation: pulse-anim 2.5s infinite; }
-        @keyframes pulse-anim { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.75); } }
-
-        /* ── Sidebar ── */
+        /* Layout */
         .sidebar {
-            width: var(--sidebar-w);
-            background: linear-gradient(180deg, #0a1810 0%, #060e09 100%);
-            border-right: 1px solid var(--border-subtle);
-            position: fixed; top: 0; left: 0; bottom: 0;
-            display: flex; flex-direction: column; z-index: 50;
+            width: var(--sw); background: linear-gradient(180deg,#0a1810,#060e09);
+            border-right:1px solid var(--b0); position:fixed; top:0;left:0;bottom:0;
+            display:flex; flex-direction:column; z-index:50;
         }
-        .logo-ring { background: linear-gradient(135deg, #163825, #0d2e1c); border: 1px solid #2d5a3d; }
+        .main { margin-left:var(--sw); min-height:100vh; padding:32px; }
 
-        .nav-section-label {
-            font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
-            color: var(--text-muted); padding: 16px 14px 6px;
-        }
-        .nav-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px; border-radius: 10px;
-            font-size: 13px; font-weight: 500; color: var(--text-secondary);
-            cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
-        }
-        .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
-        .nav-item.active { background: rgba(52,211,153,0.09); border-left-color: var(--green-bright); color: var(--green-bright); }
+        /* Nav */
+        .nav-label { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--t2);padding:16px 14px 6px; }
+        .nav-item  { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;color:var(--t1);cursor:pointer;transition:all .15s;border-left:3px solid transparent; }
+        .nav-item:hover { background:rgba(255,255,255,.04);color:var(--t0); }
+        .nav-item.active{ background:rgba(52,211,153,.09);border-left-color:var(--green);color:var(--green); }
 
-        /* ── Main ── */
-        .main-content { margin-left: var(--sidebar-w); min-height: 100vh; padding: 32px; max-width: 1400px; }
+        /* Cards */
+        .card { background:var(--card);border:1px solid var(--b0);border-radius:16px;padding:22px;transition:transform .2s,border-color .2s;position:relative;overflow:hidden; }
+        .card:hover { transform:translateY(-2px);border-color:var(--b1); }
 
-        /* ── Cards ── */
-        .metric-card {
-            background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px;
-            padding: 22px; transition: transform 0.2s, border-color 0.2s; position: relative; overflow: hidden;
-        }
-        .metric-card:hover { transform: translateY(-2px); border-color: var(--border-active); }
+        /* Table */
+        .tbl { width:100%;border-collapse:collapse; }
+        .tbl thead tr { background:var(--surface);border-bottom:1px solid var(--b0); }
+        .tbl thead th { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);padding:14px 18px; }
+        .tbl tbody tr { border-bottom:1px solid #0f1912;transition:background .12s;cursor:pointer; }
+        .tbl tbody tr:hover { background:var(--hover); }
+        .tbl tbody td { padding:13px 18px;font-size:13px; }
+        .tbl-wrap { border:1px solid var(--b0);border-radius:14px;overflow:hidden; }
+        .sortable { cursor:pointer;user-select:none; }
+        .sortable:hover { color:var(--green); }
 
-        /* ── Table ── */
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table thead tr { background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); }
-        .data-table thead th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 14px 18px; }
-        .data-table tbody tr { border-bottom: 1px solid #0f1912; transition: background 0.12s; cursor: pointer; }
-        .data-table tbody tr:hover { background: var(--bg-hover); }
-        .data-table tbody td { padding: 13px 18px; font-size: 13px; }
-        th.sortable { cursor: pointer; user-select: none; }
-        th.sortable:hover { color: var(--green-bright); }
-        .table-wrapper { border: 1px solid var(--border-subtle); border-radius: 14px; overflow: hidden; }
+        /* Badges */
+        .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em; }
+        .b-ok   { background:#0a2718;color:var(--green);border:1px solid #154a2a; }
+        .b-warn { background:#2a1f0a;color:var(--yellow);border:1px solid #4a3510; }
+        .b-crit { background:#2a0e0e;color:var(--red);border:1px solid #4a1818; }
+        .b-ipk  { background:#0a2718;color:var(--green);border:1px solid #154a2a; }
+        .b-ipd  { background:#2a0e0e;color:var(--red);border:1px solid #4a1818; }
 
-        /* ── Badges ── */
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
-        .badge-ok   { background: #0a2718; color: var(--green-bright); border: 1px solid #154a2a; }
-        .badge-warn { background: #2a1f0a; color: var(--yellow-bright); border: 1px solid #4a3510; }
-        .badge-crit { background: #2a0e0e; color: var(--red-bright); border: 1px solid #4a1818; }
-        .badge-insc-ok   { background: #0a2718; color: var(--green-bright); border: 1px solid #154a2a; }
-        .badge-insc-pend { background: #2a0e0e; color: var(--red-bright); border: 1px solid #4a1818; }
+        /* Inputs */
+        .s-wrap { position:relative; }
+        .s-ico  { position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--t2);pointer-events:none; }
+        .s-input{ background:var(--surface);border:1px solid var(--b0);color:var(--t0);border-radius:10px;padding:9px 12px 9px 36px;font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color .2s; }
+        .s-input:focus { border-color:var(--green); }
+        .s-input::placeholder { color:var(--t2); }
+        .fsel { background:var(--surface);border:1px solid var(--b0);color:var(--t1);padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;outline:none;font-family:inherit; }
+        .fsel option { background:#111a14; }
+        .fbtn { background:var(--surface);border:1px solid var(--b0);color:var(--t1);padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s; }
+        .fbtn:hover  { border-color:var(--b1);color:var(--t0); }
+        .fbtn.active { background:rgba(52,211,153,.1);border-color:var(--green);color:var(--green); }
 
-        /* ── Inputs ── */
-        .search-wrap { position: relative; flex: 1; min-width: 220px; }
-        .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; width: 14px; height: 14px; }
-        .search-input {
-            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-primary);
-            border-radius: 10px; padding: 9px 12px 9px 36px; font-size: 13px; font-family: 'DM Sans', sans-serif;
-            outline: none; width: 100%; transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .search-input:focus { border-color: var(--green-bright); box-shadow: 0 0 0 3px rgba(52,211,153,0.08); }
-        .search-input::placeholder { color: var(--text-muted); }
+        /* Buttons */
+        .btn-p { background:linear-gradient(135deg,#163825,#0f2a1a);border:1px solid var(--b1);color:var(--green);padding:9px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s;font-family:inherit; }
+        .btn-p:hover { background:linear-gradient(135deg,#1e4a30,#163825);box-shadow:0 0 20px rgba(52,211,153,.15); }
+        .btn-s { background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.18);color:var(--green);padding:9px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s;font-family:inherit; }
+        .btn-s:hover   { background:rgba(52,211,153,.12); }
+        .btn-s:disabled{ opacity:.5;cursor:not-allowed; }
 
-        .filter-btn {
-            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
-            padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
-            transition: all 0.12s; font-family: 'DM Sans', sans-serif;
-        }
-        .filter-btn:hover { border-color: var(--border-active); color: var(--text-primary); }
-        .filter-btn.active { background: rgba(52,211,153,0.1); border-color: var(--green-bright); color: var(--green-bright); }
+        /* Modal */
+        .backdrop { background:rgba(0,0,0,.8);backdrop-filter:blur(8px); }
+        .modal-box { background:linear-gradient(145deg,#0f1a13,#0a1209);border:1px solid var(--b0);border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.6); }
 
-        select.filter-select {
-            background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
-            padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;
-            outline: none; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s;
-        }
-        select.filter-select:focus { border-color: var(--green-bright); }
-        select.filter-select option { background: #111a14; }
+        /* Month tag */
+        .m-tag { background:#180b0b;border:1px solid #3d1a1a;color:var(--red);border-radius:8px;padding:7px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between; }
 
-        /* ── Buttons ── */
-        .btn-primary {
-            background: linear-gradient(135deg, #163825, #0f2a1a); border: 1px solid var(--border-active);
-            color: var(--green-bright); padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
-            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
-        }
-        .btn-primary:hover { background: linear-gradient(135deg, #1e4a30, #163825); box-shadow: 0 0 20px rgba(52,211,153,0.15); }
-
-        .btn-secondary {
-            background: rgba(52,211,153,0.07); border: 1px solid rgba(52,211,153,0.18);
-            color: var(--green-bright); padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
-            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
-        }
-        .btn-secondary:hover { background: rgba(52,211,153,0.12); }
-        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* ── Modal ── */
-        .modal-backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
-        .modal-card {
-            background: linear-gradient(145deg, #0f1a13, #0a1209);
-            border: 1px solid var(--border-subtle); border-radius: 20px;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
-        }
-
-        /* ── Month tags ── */
-        .month-tag {
-            background: #180b0b; border: 1px solid #3d1a1a; color: var(--red-bright);
-            border-radius: 8px; padding: 7px 12px; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.05em;
-            display: flex; align-items: center; justify-content: space-between; gap: 6px;
-        }
-
-        /* ── Note / contact inputs ── */
-        .note-area {
-            background: #090f0b; border: 1px solid var(--border-subtle); color: #c5d8ca;
-            border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.6;
-            resize: none; width: 100%; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
-        }
-        .note-area:focus { outline: none; border-color: var(--green-bright); }
-        .note-area::placeholder { color: var(--text-muted); }
-
-        .contact-input {
-            background: #090f0b; border: 1px solid var(--border-subtle); border-radius: 8px;
-            padding: 9px 12px; color: var(--text-primary); font-size: 12px;
-            font-family: 'DM Sans', sans-serif; width: 100%; outline: none; transition: border-color 0.2s;
-        }
-        .contact-input:focus { border-color: var(--green-bright); }
-        .contact-input::placeholder { color: var(--text-muted); }
-
-        /* ── Stat pill ── */
-        .stat-pill { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 14px; text-align: center; }
-
-        /* ── Tab bar ── */
-        .tab-bar { display: flex; gap: 4px; background: var(--bg-surface); padding: 4px; border-radius: 10px; margin-bottom: 16px; }
-        .tab-btn { flex: 1; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; background: transparent; border: none; font-family: 'DM Sans', sans-serif; }
-        .tab-btn.active { background: rgba(52,211,153,0.1); color: var(--green-bright); }
-        .tab-btn:hover:not(.active) { color: var(--text-secondary); }
-
-        /* ── Sidebar mini summary ── */
-        .sidebar-summary { padding: 10px 14px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); }
-        .sidebar-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .sidebar-row:last-child { margin-bottom: 0; }
-
-        /* ── Toast ── */
-        .toast {
-            position: fixed; bottom: 24px; right: 24px;
-            background: #0d2e1c; border: 1px solid #1a4a2e; color: var(--green-bright);
-            padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600;
-            display: flex; align-items: center; gap: 8px;
-            z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: fadeUp 0.3s ease forwards;
-        }
-
-        /* ── Section divider ── */
-        .section-divider { border: none; border-top: 1px solid var(--border-subtle); margin: 24px 0; }
-
-        /* ── Empty state ── */
-        .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); }
-
-        /* ── Icon color helpers ── */
-        .icon-green { color: var(--green-bright); }
-        .icon-muted { color: var(--text-muted); }
-        .icon-red   { color: var(--red-bright); }
-
-        /* ── Print ── */
-        @media print {
-            .sidebar, .no-print { display: none !important; }
-            .main-content { margin-left: 0 !important; padding: 16px; }
-            body { background: white; color: black; }
-        }
+        /* Misc */
+        .note-ta { background:#090f0b;border:1px solid var(--b0);color:#c5d8ca;border-radius:10px;padding:12px;font-size:12px;line-height:1.6;resize:none;width:100%;font-family:inherit;transition:border-color .2s;outline:none; }
+        .note-ta:focus   { border-color:var(--green); }
+        .c-input  { background:#090f0b;border:1px solid var(--b0);border-radius:8px;padding:9px 12px;color:var(--t0);font-size:12px;font-family:inherit;width:100%;outline:none;transition:border-color .2s; }
+        .c-input:focus { border-color:var(--green); }
+        .c-input::placeholder { color:var(--t2); }
+        .stat-pill{ background:var(--surface);border:1px solid var(--b0);border-radius:10px;padding:10px 14px;text-align:center; }
+        .tab-bar  { display:flex;gap:4px;background:var(--surface);padding:4px;border-radius:10px;margin-bottom:16px; }
+        .tab-btn  { flex:1;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .15s;background:transparent;border:none;font-family:inherit; }
+        .tab-btn.active{ background:rgba(52,211,153,.1);color:var(--green); }
+        .sb-sum   { background:var(--surface);border:1px solid var(--b0);border-radius:10px;padding:10px 14px; }
+        .sb-row   { display:flex;justify-content:space-between;align-items:center;margin-bottom:6px; }
+        .sb-row:last-child{ margin-bottom:0; }
+        .toast    { position:fixed;bottom:24px;right:24px;background:#0d2e1c;border:1px solid #1a4a2e;color:var(--green);padding:12px 18px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:fadeUp .3s ease both; }
+        .divider  { border:none;border-top:1px solid var(--b0);margin:24px 0; }
+        .empty    { padding:48px 24px;text-align:center;color:var(--t2); }
+        .logo-ring{ background:linear-gradient(135deg,#163825,#0d2e1c);border:1px solid #2d5a3d; }
+        @media print { .sidebar,.no-print{ display:none!important; } .main{ margin-left:0!important;padding:16px; } }
     </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useMemo, useEffect, useRef } = React;
+const { useState, useMemo, useEffect, useRef, useCallback } = React;
 
-// ── Lucide Icon component ─────────────────────────────────────────────────────
-const Icon = ({ name, size = 18, className = "" }) => (
-    <i data-lucide={name} className={className}
-       style={{ width: size, height: size, display: 'inline-block', flexShrink: 0 }}></i>
-);
+/* ─── SVG Icons inline (sin lucide CDN para evitar conflictos) ─── */
+const ICONS = {
+    'graduation-cap': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,
+    'layout-dashboard': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+    'refresh-cw': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>,
+    'download': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    'file-text': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    'check-circle': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    'clock': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    'alert-triangle': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+    'search': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+    'x': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+    'user': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    'eye': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+    'alert-circle': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+    'save': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+    'check': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+    'phone': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6.29 6.29l.89-.89a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+    'mail': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
+    'wifi-off': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/><line x1="2" y1="2" x2="22" y2="22"/></svg>,
+    'loader': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>,
+    'search-x': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+    'chevron-up': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>,
+    'chevron-down': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+    'chevrons-updown': <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>,
+};
 
+const Icon = ({ name, size = 18, color, style = {} }) => {
+    const svg = ICONS[name];
+    if (!svg) return null;
+    return (
+        <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:size, height:size, flexShrink:0, color: color || 'currentColor', ...style }}>
+            {React.cloneElement(svg, { width: size, height: size })}
+        </span>
+    );
+};
+
+/* ─── Constants ─── */
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEUAScY_WitIBOi5oqPCW0IV8-FE-8UMzV1PTaDZhYJrP9283ZIEp--4wNsLJJ5MX3skdScKj669H/pub?gid=0&single=true&output=csv';
 
-const MONTH_CONFIG = [
-    { name: "Marzo",           monthIndex: 2  },
-    { name: "Abril",           monthIndex: 3  },
-    { name: "Mayo",            monthIndex: 4  },
-    { name: "Junio",           monthIndex: 5  },
-    { name: "Mant. Junio",     monthIndex: 5  },
-    { name: "Julio",           monthIndex: 6  },
-    { name: "Agosto",          monthIndex: 7  },
-    { name: "Septiembre",      monthIndex: 8  },
-    { name: "Octubre",         monthIndex: 9  },
-    { name: "Noviembre",       monthIndex: 10 },
-    { name: "Mant. Noviembre", monthIndex: 10 },
-    { name: "Diciembre",       monthIndex: 11 }
+const MONTHS = [
+    { name:'Marzo',           mi:2  }, { name:'Abril',           mi:3  },
+    { name:'Mayo',            mi:4  }, { name:'Junio',           mi:5  },
+    { name:'Mant. Junio',     mi:5  }, { name:'Julio',           mi:6  },
+    { name:'Agosto',          mi:7  }, { name:'Septiembre',      mi:8  },
+    { name:'Octubre',         mi:9  }, { name:'Noviembre',       mi:10 },
+    { name:'Mant. Noviembre', mi:10 }, { name:'Diciembre',       mi:11 },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/* ─── Helpers ─── */
 function parseCSV(text) {
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-    const currentMonth = new Date().getMonth();
-
-    return lines.slice(1).map((row, index) => {
+    const lines   = text.split(/\r?\n/).filter(l => l.trim());
+    const current = new Date().getMonth();
+    return lines.slice(1).map((row, idx) => {
         const cols = [];
         let cur = '', inQ = false;
-        for (let ch of row) {
-            if (ch === '"') inQ = !inQ;
-            else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        for (const ch of row) {
+            if (ch === '"')          inQ = !inQ;
+            else if (ch===',' && !inQ){ cols.push(cur.trim()); cur=''; }
             else cur += ch;
         }
         cols.push(cur.trim());
-
-        const level       = cols[0]  || "N/A";
-        const grade       = cols[1]  || "S/D";
-        const studentName = (cols[4] || "S/A").toUpperCase();
-        const inscripcion = cols[9]  || "";
-        const feeData     = cols.slice(11, 23);
-        const unpaidMonths = [];
-        const paidMonths   = [];
-
-        feeData.forEach((val, idx) => {
-            const config = MONTH_CONFIG[idx];
-            if (!config) return;
-            const isPast  = config.monthIndex <= currentMonth;
-            const isEmpty = !val || val.trim() === "" || val.toLowerCase() === "debe";
-            if (isPast) {
-                if (isEmpty) unpaidMonths.push(config.name);
-                else paidMonths.push(config.name);
-            }
+        const name = (cols[4] || '').trim().toUpperCase();
+        if (!name) return null;
+        const insc    = (cols[9] || '').trim();
+        const fees    = cols.slice(11, 23);
+        const unpaid  = [], paid = [];
+        fees.forEach((v, i) => {
+            const m = MONTHS[i]; if (!m) return;
+            if (m.mi > current) return;
+            const empty = !v || v.trim()==='' || v.trim().toLowerCase()==='debe';
+            if (empty) unpaid.push(m.name); else paid.push(m.name);
         });
-
         return {
-            id: index, level, grade,
-            fullName:         studentName,
-            hasInscripcion:   inscripcion.trim() !== "",
-            unpaidMonthsList: unpaidMonths,
-            paidMonthsList:   paidMonths,
-            monthsOwed:       unpaidMonths.length,
-            monthsPaid:       paidMonths.length,
+            id: idx, level: cols[0]||'N/A', grade: cols[1]||'S/D',
+            fullName: name, hasInsc: insc !== '',
+            unpaid, paid,
+            owed: unpaid.length, paidCount: paid.length,
         };
-    }).filter(f => f.fullName !== "S/A");
+    }).filter(Boolean);
 }
 
-function getNotes() {
-    try { return JSON.parse(localStorage.getItem('leloir_notes') || '{}'); } catch { return {}; }
-}
-function saveNote(id, text) {
-    const notes = getNotes(); notes[id] = text;
-    localStorage.setItem('leloir_notes', JSON.stringify(notes));
-}
-function getContacts() {
-    try { return JSON.parse(localStorage.getItem('leloir_contacts') || '{}'); } catch { return {}; }
-}
-function saveContact(id, data) {
-    const c = getContacts(); c[id] = data;
-    localStorage.setItem('leloir_contacts', JSON.stringify(c));
-}
+const LS = {
+    getNotes:    () => { try { return JSON.parse(localStorage.getItem('ll_notes')||'{}'); } catch { return {}; } },
+    saveNote:    (id,v) => { const n=LS.getNotes(); n[id]=v; localStorage.setItem('ll_notes', JSON.stringify(n)); },
+    getContacts: () => { try { return JSON.parse(localStorage.getItem('ll_contacts')||'{}'); } catch { return {}; } },
+    saveContact: (id,v) => { const c=LS.getContacts(); c[id]=v; localStorage.setItem('ll_contacts', JSON.stringify(c)); },
+};
 
 function exportCSV(data) {
-    const header = ['Nombre','Curso','Nivel','Inscripción','Cuotas Adeudadas','Estado','Meses Adeudados'];
+    const hdr = ['Nombre','Curso','Nivel','Inscripción','Cuotas Adeudadas','Estado','Meses Adeudados'];
     const rows = data.map(f => [
         f.fullName, f.grade, f.level,
-        f.hasInscripcion ? 'Pagada' : 'Pendiente',
-        f.monthsOwed,
-        f.monthsOwed === 0 ? 'Al Día' : f.monthsOwed < 3 ? 'Pendiente' : 'Mora Crítica',
-        f.unpaidMonthsList.join(' | ')
+        f.hasInsc ? 'Pagada' : 'Pendiente', f.owed,
+        f.owed===0?'Al Día':f.owed<3?'Pendiente':'Mora Crítica',
+        f.unpaid.join(' | '),
     ]);
-    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const csv  = [hdr,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url;
-    a.download = `leloir_cobranzas_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.csv`;
+    a.href=url; a.download=`leloir_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.csv`;
     a.click(); URL.revokeObjectURL(url);
 }
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-function getStatusInfo(months) {
-    if (months === 0) return { label: 'Al Día',      css: 'badge-ok',   color: '#34d399' };
-    if (months < 3)   return { label: 'Pendiente',   css: 'badge-warn', color: '#fbbf24' };
-    return                   { label: 'Mora Crítica', css: 'badge-crit', color: '#f87171' };
+function statusOf(n) {
+    if (n===0) return { label:'Al Día',      css:'b-ok',   color:'#34d399' };
+    if (n<3)   return { label:'Pendiente',   css:'b-warn', color:'#fbbf24' };
+    return             { label:'Mora Crítica',css:'b-crit', color:'#f87171' };
 }
 
-const StatusBadge = ({ months }) => {
-    const s = getStatusInfo(months);
-    return <span className={"badge " + s.css}>{s.label}</span>;
+/* ─── Small components ─── */
+const SBadge = ({ n }) => {
+    const s = statusOf(n);
+    return <span className={"badge "+s.css}>{s.label}</span>;
 };
 
-// ── Metric Card ───────────────────────────────────────────────────────────────
-const MetricCard = ({ label, value, sub, accent, icon }) => (
-    <div className="metric-card" style={{ borderTop: '2px solid ' + accent }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: accent }}>{label}</p>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent }}>
+const MetricCard = ({ label, value, sub, color, icon }) => (
+    <div className="card" style={{ borderTop:'2px solid '+color }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color }}>{label}</p>
+            <div style={{ width:34, height:34, borderRadius:10, background:color+'22', display:'flex', alignItems:'center', justifyContent:'center', color }}>
                 <Icon name={icon} size={15} />
             </div>
         </div>
-        <h3 className="serif" style={{ fontSize: 42, fontWeight: 700, color: accent, lineHeight: 1, marginBottom: 8 }}>{value}</h3>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{sub}</p>
+        <p className="serif" style={{ fontSize:42, fontWeight:700, color, lineHeight:1, marginBottom:8 }}>{value}</p>
+        <p style={{ fontSize:11, color:'var(--t2)' }}>{sub}</p>
     </div>
 );
 
-// ── Donut Chart ───────────────────────────────────────────────────────────────
-const DonutChart = ({ alDia, pendiente, criticos }) => {
+const DonutChart = ({ alDia, pend, crit }) => {
     const canvasRef = useRef(null);
     const chartRef  = useRef(null);
-    const total = alDia + pendiente + criticos;
+    const total = alDia + pend + crit;
 
     useEffect(() => {
-        if (!canvasRef.current) return;
-        if (chartRef.current) chartRef.current.destroy();
-        chartRef.current = new Chart(canvasRef.current, {
-            type: 'doughnut',
-            data: {
-                labels: ['Al Día', 'Pendiente', 'Mora Crítica'],
-                datasets: [{
-                    data: [alDia, pendiente, criticos],
-                    backgroundColor: ['#0a2718', '#2a1f0a', '#2a0e0e'],
-                    borderColor:     ['#34d399', '#fbbf24', '#f87171'],
-                    borderWidth: 2, hoverOffset: 8
-                }]
-            },
-            options: {
-                cutout: '74%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#7a9e87', font: { size: 11, family: 'DM Sans' },
-                            padding: 16, boxWidth: 10, boxHeight: 10,
-                            usePointStyle: true, pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: '#111a14', borderColor: '#1e3329', borderWidth: 1,
-                        titleColor: '#e8e8e0', bodyColor: '#7a9e87', padding: 12,
-                        callbacks: {
-                            label: ctx => ` ${ctx.parsed} alumnos (${total ? Math.round(ctx.parsed / total * 100) : 0}%)`
+        if (!canvasRef.current || typeof Chart === 'undefined') return;
+        if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+        try {
+            chartRef.current = new Chart(canvasRef.current, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Al Día','Pendiente','Mora Crítica'],
+                    datasets: [{ data:[alDia,pend,crit], backgroundColor:['#0a2718','#2a1f0a','#2a0e0e'], borderColor:['#34d399','#fbbf24','#f87171'], borderWidth:2, hoverOffset:8 }]
+                },
+                options: {
+                    cutout:'74%',
+                    plugins: {
+                        legend:{ position:'bottom', labels:{ color:'#7a9e87', font:{size:11,family:'DM Sans'}, padding:16, boxWidth:10, boxHeight:10, usePointStyle:true, pointStyle:'circle' } },
+                        tooltip:{ backgroundColor:'#111a14', borderColor:'#1e3329', borderWidth:1, titleColor:'#e8e8e0', bodyColor:'#7a9e87', padding:12,
+                            callbacks:{ label: ctx => ` ${ctx.parsed} (${total?Math.round(ctx.parsed/total*100):0}%)` }
                         }
                     }
                 }
-            }
-        });
-        return () => chartRef.current && chartRef.current.destroy();
-    }, [alDia, pendiente, criticos]);
+            });
+        } catch(e) { /* Chart.js load race — ignore */ }
+        return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
+    }, [alDia, pend, crit]);
 
     return (
-        <div className="metric-card" style={{ borderTop: '2px solid #34d399' }}>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#34d399', marginBottom: 16 }}>Distribución</p>
-            <div style={{ position: 'relative', height: 200 }}>
+        <div className="card" style={{ borderTop:'2px solid #34d399' }}>
+            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'#34d399', marginBottom:16 }}>Distribución</p>
+            <div style={{ position:'relative', height:200 }}>
                 <canvas ref={canvasRef}></canvas>
             </div>
         </div>
     );
 };
 
-// ── Note Field ────────────────────────────────────────────────────────────────
-const NoteField = ({ familyId }) => {
-    const [note, setNote]   = useState(() => getNotes()[familyId] || '');
-    const [saved, setSaved] = useState(false);
-
-    const handleSave = () => {
-        saveNote(familyId, note);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1800);
-    };
-
+const NoteField = ({ id }) => {
+    const [note, setNote] = useState(() => LS.getNotes()[id] || '');
+    const [ok, setOk] = useState(false);
+    const save = () => { LS.saveNote(id, note); setOk(true); setTimeout(()=>setOk(false),1800); };
     return (
         <div>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(52,211,153,0.5)', marginBottom: 8 }}>
-                Notas internas
-            </p>
-            <textarea
-                className="note-area" rows={3}
-                placeholder="Ej: Llamó el 3/5, acordó pago para el viernes…"
-                value={note}
-                onChange={e => setNote(e.target.value)}
-            />
-            <button onClick={handleSave} className="btn-primary" style={{ marginTop: 8, fontSize: 12 }}>
-                <Icon name={saved ? 'check' : 'save'} size={13} />
-                {saved ? 'Guardado' : 'Guardar nota'}
+            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'rgba(52,211,153,.5)', marginBottom:8 }}>Notas internas</p>
+            <textarea className="note-ta" rows={3} placeholder="Ej: Llamó el 3/5, acordó pago para el viernes…" value={note} onChange={e=>setNote(e.target.value)} />
+            <button className="btn-p" style={{ marginTop:8, fontSize:12 }} onClick={save}>
+                <Icon name={ok?'check':'save'} size={13} /> {ok?'Guardado':'Guardar nota'}
             </button>
         </div>
     );
 };
 
-// ── Contact Field ─────────────────────────────────────────────────────────────
-const ContactField = ({ familyId }) => {
-    const stored = getContacts()[familyId] || { phone: '', email: '' };
+const ContactField = ({ id }) => {
+    const stored = LS.getContacts()[id] || { phone:'', email:'' };
     const [phone, setPhone] = useState(stored.phone);
     const [email, setEmail] = useState(stored.email);
-    const [saved, setSaved] = useState(false);
-
-    const handleSave = () => {
-        saveContact(familyId, { phone, email });
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1800);
-    };
-
+    const [ok, setOk] = useState(false);
+    const save = () => { LS.saveContact(id,{phone,email}); setOk(true); setTimeout(()=>setOk(false),1800); };
     return (
         <div>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(52,211,153,0.5)', marginBottom: 10 }}>
-                Datos de contacto
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <input
-                    type="tel" className="contact-input"
-                    placeholder="Teléfono"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                />
-                <input
-                    type="email" className="contact-input"
-                    placeholder="Email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                />
-                <button onClick={handleSave} className="btn-primary" style={{ fontSize: 12, alignSelf: 'flex-start' }}>
-                    <Icon name={saved ? 'check' : 'save'} size={12} />
-                    {saved ? 'Guardado' : 'Guardar'}
+            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'rgba(52,211,153,.5)', marginBottom:10 }}>Datos de contacto</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <input className="c-input" type="tel" placeholder="Teléfono" value={phone} onChange={e=>setPhone(e.target.value)} />
+                <input className="c-input" type="email" placeholder="Email"    value={email} onChange={e=>setEmail(e.target.value)} />
+                <button className="btn-p" style={{ fontSize:12, alignSelf:'flex-start' }} onClick={save}>
+                    <Icon name={ok?'check':'save'} size={12} /> {ok?'Guardado':'Guardar'}
                 </button>
             </div>
         </div>
     );
 };
 
-// ── Family Modal ──────────────────────────────────────────────────────────────
-const FamilyModal = ({ family, onClose }) => {
+const Modal = ({ fam, onClose }) => {
     const [tab, setTab] = useState('deuda');
-    const st = getStatusInfo(family.monthsOwed);
-    const total = family.monthsPaid + family.monthsOwed;
-    const pct   = total > 0 ? Math.round(family.monthsPaid / total * 100) : 100;
+    const st  = statusOf(fam.owed);
+    const tot = fam.paidCount + fam.owed;
+    const pct = tot > 0 ? Math.round(fam.paidCount / tot * 100) : 100;
 
     useEffect(() => {
-        const handler = e => { if (e.key === 'Escape') onClose(); };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [onClose]);
+        const h = e => { if (e.key==='Escape') onClose(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, []);
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div className="modal-backdrop" style={{ position: 'absolute', inset: 0 }} onClick={onClose}></div>
-            <div className="modal-card fade-up" style={{ position: 'relative', width: '100%', maxWidth: 460, padding: 28 }}>
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+            <div className="backdrop" style={{ position:'absolute', inset:0 }} onClick={onClose}></div>
+            <div className="modal-box fade-up" style={{ position:'relative', width:'100%', maxWidth:460, padding:28 }}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <div className="logo-ring" style={{ width: 46, height: 46, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ color: '#34d399' }}><Icon name="user" size={20} /></span>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+                    <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+                        <div className="logo-ring" style={{ width:46, height:46, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--green)', flexShrink:0 }}>
+                            <Icon name="user" size={20} />
                         </div>
                         <div>
-                            <h2 className="serif" style={{ fontSize: 17, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 3 }}>{family.fullName}</h2>
-                            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                                {family.grade} · {family.level}
-                            </p>
+                            <h2 className="serif" style={{ fontSize:17, color:'var(--t0)', lineHeight:1.2, marginBottom:3 }}>{fam.fullName}</h2>
+                            <p style={{ fontSize:10, color:'var(--t2)', textTransform:'uppercase', letterSpacing:'.1em' }}>{fam.grade} · {fam.level}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    <button onClick={onClose} style={{ padding:6, borderRadius:8, background:'transparent', border:'none', color:'var(--t2)', cursor:'pointer' }}>
                         <Icon name="x" size={18} />
                     </button>
                 </div>
 
                 {/* Badges */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-                    <StatusBadge months={family.monthsOwed} />
-                    <span className={"badge " + (family.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend')}>
-                        Inscripción {family.hasInscripcion ? 'Pagada' : 'Pendiente'}
-                    </span>
+                <div style={{ display:'flex', gap:8, marginBottom:18, flexWrap:'wrap' }}>
+                    <SBadge n={fam.owed} />
+                    <span className={"badge "+(fam.hasInsc?'b-ipk':'b-ipd')}>Inscripción {fam.hasInsc?'Pagada':'Pendiente'}</span>
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 18 }}>
-                    <div className="stat-pill">
-                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: st.color }}>{family.monthsOwed}</p>
-                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Adeudadas</p>
-                    </div>
-                    <div className="stat-pill">
-                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: '#34d399' }}>{family.monthsPaid}</p>
-                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Pagadas</p>
-                    </div>
-                    <div className="stat-pill">
-                        <p className="serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-secondary)' }}>{pct}%</p>
-                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Al día</p>
-                    </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:18 }}>
+                    {[
+                        { val:fam.owed,      color:st.color,       label:'Adeudadas' },
+                        { val:fam.paidCount, color:'var(--green)',  label:'Pagadas'   },
+                        { val:pct+'%',       color:'var(--t1)',     label:'Al día'    },
+                    ].map(({ val, color, label }) => (
+                        <div key={label} className="stat-pill">
+                            <p className="serif" style={{ fontSize:22, fontWeight:700, color }}>{val}</p>
+                            <p style={{ fontSize:10, color:'var(--t2)', marginTop:2 }}>{label}</p>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Tabs */}
                 <div className="tab-bar">
-                    {[['deuda', 'Cuotas'], ['notas', 'Notas'], ['contacto', 'Contacto']].map(([id, label]) => (
-                        <button key={id} className={"tab-btn" + (tab === id ? ' active' : '')} onClick={() => setTab(id)}>{label}</button>
+                    {[['deuda','Cuotas'],['notas','Notas'],['contacto','Contacto']].map(([id,lbl]) => (
+                        <button key={id} className={"tab-btn"+(tab===id?' active':'')} onClick={()=>setTab(id)}>{lbl}</button>
                     ))}
                 </div>
 
-                {/* Tab content */}
                 <div key={tab} className="fade-in">
-                    {tab === 'deuda' && (
+                    {tab==='deuda' && (
                         <>
-                            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 10 }}>Meses adeudados</p>
-                            {family.unpaidMonthsList.length > 0 ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
-                                    {family.unpaidMonthsList.map((m, i) => (
-                                        <div key={i} className="month-tag">
+                            <p style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--t2)', marginBottom:10 }}>Meses adeudados</p>
+                            {fam.unpaid.length > 0 ? (
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, maxHeight:180, overflowY:'auto' }}>
+                                    {fam.unpaid.map((m,i) => (
+                                        <div key={i} className="m-tag">
                                             <span>{m}</span>
                                             <Icon name="alert-circle" size={11} />
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div style={{ padding: '28px 0', textAlign: 'center', background: '#0a2718', border: '1px solid #154a2a', borderRadius: 12 }}>
-                                    <span style={{ color: '#34d399', display: 'block', marginBottom: 8 }}><Icon name="check-circle" size={26} /></span>
-                                    <p style={{ fontSize: 11, color: '#34d399', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>¡Sin deudas pendientes!</p>
+                                <div style={{ padding:'28px 0', textAlign:'center', background:'#0a2718', border:'1px solid #154a2a', borderRadius:12 }}>
+                                    <Icon name="check-circle" size={26} color="#34d399" style={{ marginBottom:8 }} />
+                                    <p style={{ fontSize:11, color:'#34d399', fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em' }}>¡Sin deudas pendientes!</p>
                                 </div>
                             )}
-                            <p style={{ marginTop: 14, fontSize: 9, color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                            <p style={{ marginTop:14, fontSize:9, color:'var(--t2)', borderTop:'1px solid var(--b0)', paddingTop:12 }}>
                                 Solo se muestran meses transcurridos con celda vacía en la planilla.
                             </p>
                         </>
                     )}
-                    {tab === 'notas'    && <NoteField familyId={family.id} />}
-                    {tab === 'contacto' && <ContactField familyId={family.id} />}
+                    {tab==='notas'    && <NoteField id={fam.id} />}
+                    {tab==='contacto' && <ContactField id={fam.id} />}
                 </div>
             </div>
         </div>
     );
 };
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
-const Toast = ({ message, onDone }) => {
-    useEffect(() => {
-        const t = setTimeout(onDone, 2200);
-        return () => clearTimeout(t);
-    }, []);
-    return (
-        <div className="toast">
-            <Icon name="check-circle" size={15} />
-            {message}
-        </div>
-    );
+const Toast = ({ msg, onDone }) => {
+    useEffect(() => { const t=setTimeout(onDone,2200); return ()=>clearTimeout(t); }, []);
+    return <div className="toast"><Icon name="check-circle" size={15} />{msg}</div>;
 };
 
-// ── Main App ──────────────────────────────────────────────────────────────────
+/* ─── App ─── */
 const App = () => {
-    const [families,       setFamilies]       = useState([]);
-    const [loading,        setLoading]        = useState(true);
-    const [error,          setError]          = useState(null);
-    const [lastSync,       setLastSync]       = useState(null);
-    const [searchTerm,     setSearchTerm]     = useState("");
-    const [filterStatus,   setFilterStatus]   = useState("todos");
-    const [filterInsc,     setFilterInsc]     = useState("todos");
-    const [filterGrade,    setFilterGrade]    = useState("todos");
-    const [filterLevel,    setFilterLevel]    = useState("todos");
-    const [sortCol,        setSortCol]        = useState("monthsOwed");
-    const [sortDir,        setSortDir]        = useState("desc");
-    const [selectedFamily, setSelectedFamily] = useState(null);
-    const [toast,          setToast]          = useState(null);
+    const [fams,    setFams]    = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [err,     setErr]     = useState(null);
+    const [synced,  setSynced]  = useState(null);
+    const [q,       setQ]       = useState('');
+    const [fSt,     setFSt]     = useState('todos');
+    const [fIn,     setFIn]     = useState('todos');
+    const [fGr,     setFGr]     = useState('todos');
+    const [fLv,     setFLv]     = useState('todos');
+    const [sortC,   setSortC]   = useState('owed');
+    const [sortD,   setSortD]   = useState('desc');
+    const [sel,     setSel]     = useState(null);
+    const [toast,   setToast]   = useState(null);
 
-    // Run lucide icon rendering after every React render
-    useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
-
-    useEffect(() => { fetchData(); }, []);
-
-    const fetchData = async () => {
-        setLoading(true);
-        setError(null);
+    const load = useCallback(async () => {
+        setLoading(true); setErr(null);
         try {
-            const res  = await fetch(CSV_URL + '&t=' + Date.now());
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const text = await res.text();
-            setFamilies(parseCSV(text));
-            setLastSync(new Date());
-            setToast('Planilla sincronizada correctamente');
-        } catch (e) {
-            setError('No se pudo conectar con la planilla. Verificá tu conexión.');
+            const r = await fetch(CSV_URL + '&nocache=' + Date.now());
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const txt = await r.text();
+            const parsed = parseCSV(txt);
+            if (!parsed.length) throw new Error('Sin datos');
+            setFams(parsed);
+            setSynced(new Date());
+            setToast('Planilla sincronizada');
+        } catch(e) {
+            setErr('No se pudo cargar la planilla. ' + e.message);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const grades = useMemo(() => Array.from(new Set(families.map(f => f.grade).filter(Boolean))).sort(), [families]);
-    const levels = useMemo(() => Array.from(new Set(families.map(f => f.level).filter(Boolean))).sort(), [families]);
+    useEffect(() => { load(); }, [load]);
 
-    const metrics = useMemo(() => {
-        const alDia     = families.filter(f => f.monthsOwed === 0).length;
-        const morosos   = families.filter(f => f.monthsOwed >= 3).length;
-        const pendiente = families.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3).length;
-        const totalM    = families.reduce((a, f) => a + f.monthsOwed, 0);
-        return { total: families.length, alDia, morosos, pendiente, totalM };
-    }, [families]);
+    const grades = useMemo(() => [...new Set(fams.map(f=>f.grade).filter(Boolean))].sort(), [fams]);
+    const levels = useMemo(() => [...new Set(fams.map(f=>f.level).filter(Boolean))].sort(), [fams]);
 
-    const handleSort = col => {
-        if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        else { setSortCol(col); setSortDir('asc'); }
-    };
+    const metrics = useMemo(() => ({
+        total: fams.length,
+        alDia: fams.filter(f=>f.owed===0).length,
+        pend:  fams.filter(f=>f.owed>0&&f.owed<3).length,
+        crit:  fams.filter(f=>f.owed>=3).length,
+        total_owed: fams.reduce((a,f)=>a+f.owed,0),
+    }), [fams]);
 
     const filtered = useMemo(() => {
-        let data = [...families];
-        const q = searchTerm.toLowerCase();
-        if (q) data = data.filter(f =>
-            f.fullName.toLowerCase().includes(q) ||
-            f.grade.toLowerCase().includes(q) ||
-            f.level.toLowerCase().includes(q)
-        );
-        if (filterStatus === 'aldia')   data = data.filter(f => f.monthsOwed === 0);
-        if (filterStatus === 'pend')    data = data.filter(f => f.monthsOwed > 0 && f.monthsOwed < 3);
-        if (filterStatus === 'critico') data = data.filter(f => f.monthsOwed >= 3);
-        if (filterInsc === 'pagada')    data = data.filter(f => f.hasInscripcion);
-        if (filterInsc === 'pendiente') data = data.filter(f => !f.hasInscripcion);
-        if (filterGrade !== 'todos')    data = data.filter(f => f.grade === filterGrade);
-        if (filterLevel !== 'todos')    data = data.filter(f => f.level === filterLevel);
-        data.sort((a, b) => {
-            let va = a[sortCol], vb = b[sortCol];
-            if (typeof va === 'string') va = va.toLowerCase();
-            if (typeof vb === 'string') vb = vb.toLowerCase();
-            if (va < vb) return sortDir === 'asc' ? -1 : 1;
-            if (va > vb) return sortDir === 'asc' ? 1 : -1;
-            return 0;
+        let d = [...fams];
+        const lq = q.toLowerCase();
+        if (lq) d = d.filter(f => f.fullName.toLowerCase().includes(lq) || f.grade.toLowerCase().includes(lq) || f.level.toLowerCase().includes(lq));
+        if (fSt==='aldia')  d = d.filter(f=>f.owed===0);
+        if (fSt==='pend')   d = d.filter(f=>f.owed>0&&f.owed<3);
+        if (fSt==='critico')d = d.filter(f=>f.owed>=3);
+        if (fIn==='pagada') d = d.filter(f=>f.hasInsc);
+        if (fIn==='pend2')  d = d.filter(f=>!f.hasInsc);
+        if (fGr!=='todos')  d = d.filter(f=>f.grade===fGr);
+        if (fLv!=='todos')  d = d.filter(f=>f.level===fLv);
+        d.sort((a,b) => {
+            let va=a[sortC], vb=b[sortC];
+            if (typeof va==='string'){ va=va.toLowerCase(); vb=vb.toLowerCase(); }
+            return sortD==='asc' ? (va<vb?-1:va>vb?1:0) : (va>vb?-1:va<vb?1:0);
         });
-        return data;
-    }, [families, searchTerm, filterStatus, filterInsc, filterGrade, filterLevel, sortCol, sortDir]);
+        return d;
+    }, [fams,q,fSt,fIn,fGr,fLv,sortC,sortD]);
 
-    const SortIcon = ({ col }) => {
-        if (sortCol !== col) return <Icon name="chevrons-up-down" size={12} className="inline ml-1" />;
-        return sortDir === 'asc'
-            ? <Icon name="chevron-up"   size={12} className="inline ml-1 text-emerald-400" />
-            : <Icon name="chevron-down" size={12} className="inline ml-1 text-emerald-400" />;
+    const toggleSort = col => {
+        if (sortC===col) setSortD(d=>d==='asc'?'desc':'asc');
+        else { setSortC(col); setSortD('asc'); }
+    };
+    const SortIco = ({ col }) => {
+        if (sortC!==col) return <Icon name="chevrons-updown" size={11} style={{ marginLeft:3, opacity:.4 }} />;
+        return <Icon name={sortD==='asc'?'chevron-up':'chevron-down'} size={11} color="#34d399" style={{ marginLeft:3 }} />;
     };
 
-    const clearFilters = () => {
-        setSearchTerm(""); setFilterStatus("todos");
-        setFilterInsc("todos"); setFilterGrade("todos"); setFilterLevel("todos");
-    };
-    const hasFilters = searchTerm || filterStatus !== 'todos' || filterInsc !== 'todos' || filterGrade !== 'todos' || filterLevel !== 'todos';
-
-    const currentMonthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date());
+    const clearF = () => { setQ(''); setFSt('todos'); setFIn('todos'); setFGr('todos'); setFLv('todos'); };
+    const hasF   = q || fSt!=='todos' || fIn!=='todos' || fGr!=='todos' || fLv!=='todos';
+    const month  = new Intl.DateTimeFormat('es-ES',{month:'long'}).format(new Date());
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex' }}>
+        <div style={{ minHeight:'100vh', display:'flex' }}>
 
-            {/* ── Sidebar ── */}
+            {/* Sidebar */}
             <aside className="sidebar">
-                <div style={{ padding: 24, borderBottom: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div className="logo-ring" style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ color: '#34d399' }}><Icon name="graduation-cap" size={19} /></span>
+                <div style={{ padding:24, borderBottom:'1px solid var(--b0)' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                        <div className="logo-ring" style={{ width:40, height:40, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--green)', flexShrink:0 }}>
+                            <Icon name="graduation-cap" size={19} />
                         </div>
                         <div>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>Instituto Leloir</span>
-                            <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Gestión de Cobranzas</span>
+                            <span style={{ fontSize:13, fontWeight:700, color:'var(--t0)', display:'block', lineHeight:1.3 }}>Instituto Leloir</span>
+                            <span style={{ fontSize:9, color:'var(--t2)', textTransform:'uppercase', letterSpacing:'.12em' }}>Gestión de Cobranzas</span>
                         </div>
                     </div>
                 </div>
 
-                <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
-                    <div className="nav-section-label">Panel</div>
+                <nav style={{ flex:1, padding:'16px 12px', overflowY:'auto' }}>
+                    <div className="nav-label">Panel</div>
                     <div className="nav-item active">
                         <Icon name="layout-dashboard" size={15} />
                         Estado de Cuotas
                     </div>
 
-                    {families.length > 0 && (
+                    {fams.length > 0 && (
                         <>
-                            <div className="nav-section-label" style={{ marginTop: 16 }}>Resumen rápido</div>
-                            <div className="sidebar-summary">
-                                <div className="sidebar-row">
-                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{metrics.total}</span>
-                                </div>
-                                <div className="sidebar-row">
-                                    <span style={{ fontSize: 11, color: '#34d399' }}>Al día</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#34d399' }}>{metrics.alDia}</span>
-                                </div>
-                                <div className="sidebar-row">
-                                    <span style={{ fontSize: 11, color: '#fbbf24' }}>Pendientes</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24' }}>{metrics.pendiente}</span>
-                                </div>
-                                <div className="sidebar-row">
-                                    <span style={{ fontSize: 11, color: '#f87171' }}>Mora crítica</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f87171' }}>{metrics.morosos}</span>
-                                </div>
+                            <div className="nav-label" style={{ marginTop:16 }}>Resumen rápido</div>
+                            <div className="sb-sum">
+                                {[
+                                    ['Total',       metrics.total,       'var(--t0)'   ],
+                                    ['Al día',      metrics.alDia,       'var(--green)'],
+                                    ['Pendientes',  metrics.pend,        'var(--yellow)'],
+                                    ['Mora crítica',metrics.crit,        'var(--red)'  ],
+                                ].map(([l,v,c]) => (
+                                    <div key={l} className="sb-row">
+                                        <span style={{ fontSize:11, color:c }}>{l}</span>
+                                        <span style={{ fontSize:11, fontWeight:700, color:c }}>{v}</span>
+                                    </div>
+                                ))}
                             </div>
                         </>
                     )}
                 </nav>
 
-                <div style={{ padding: 12, borderTop: '1px solid var(--border-subtle)' }}>
-                    {lastSync && (
-                        <p style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
-                            Actualizado: {lastSync.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                    )}
-                    <button onClick={fetchData} disabled={loading} className="btn-secondary no-print" style={{ width: '100%', justifyContent: 'center' }}>
-                        <Icon name="refresh-cw" size={13} className={loading ? 'spin' : ''} />
-                        {loading ? 'Sincronizando…' : 'Sincronizar'}
+                <div style={{ padding:12, borderTop:'1px solid var(--b0)' }}>
+                    {synced && <p style={{ fontSize:9, color:'var(--t2)', textAlign:'center', marginBottom:8 }}>Actualizado: {synced.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</p>}
+                    <button onClick={load} disabled={loading} className="btn-s no-print" style={{ width:'100%', justifyContent:'center' }}>
+                        <span className={loading?'spin':''}><Icon name="refresh-cw" size={13} /></span>
+                        {loading?'Sincronizando…':'Sincronizar'}
                     </button>
                 </div>
             </aside>
 
-            {/* ── Main ── */}
-            <main className="main-content">
-
-                {/* Header */}
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }} className="no-print">
+            {/* Main */}
+            <main className="main">
+                <header style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28 }} className="no-print">
                     <div>
-                        <h1 className="serif" style={{ fontSize: 28, color: 'var(--text-primary)', fontWeight: 700, marginBottom: 4 }}>Control de Morosidad</h1>
-                        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                            Deuda calculada al mes de{' '}
-                            <span style={{ color: '#34d399', fontWeight: 600, textTransform: 'capitalize' }}>{currentMonthName}</span>
+                        <h1 className="serif" style={{ fontSize:28, color:'var(--t0)', fontWeight:700, marginBottom:4 }}>Control de Morosidad</h1>
+                        <p style={{ fontSize:13, color:'var(--t1)' }}>
+                            Deuda calculada al mes de <span style={{ color:'var(--green)', fontWeight:600, textTransform:'capitalize' }}>{month}</span>
                         </p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, background: '#0a2718', border: '1px solid #154a2a' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'#0a2718', border:'1px solid #154a2a' }}>
                             <div className="pulse-dot"></div>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em' }}>En línea</span>
+                            <span style={{ fontSize:10, fontWeight:700, color:'var(--green)', textTransform:'uppercase', letterSpacing:'.1em' }}>En línea</span>
                         </div>
-                        <button onClick={() => exportCSV(filtered)} className="btn-primary">
-                            <Icon name="download" size={14} />
-                            Exportar CSV
+                        <button onClick={() => exportCSV(filtered)} className="btn-p">
+                            <Icon name="download" size={14} /> Exportar CSV
                         </button>
                     </div>
                 </header>
 
                 {loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12, color: 'var(--text-muted)' }}>
-                        <span style={{ color: '#34d399' }}><Icon name="loader" size={20} className="spin" /></span>
-                        <span style={{ fontSize: 13 }}>Cargando datos desde la planilla…</span>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:220, gap:12, color:'var(--t2)' }}>
+                        <span className="spin" style={{ color:'var(--green)' }}><Icon name="loader" size={22} /></span>
+                        <span style={{ fontSize:13 }}>Cargando datos desde la planilla…</span>
                     </div>
-                ) : error ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: 48, background: '#180b0b', border: '1px solid #3d1a1a', borderRadius: 16, textAlign: 'center' }}>
-                        <span style={{ color: '#f87171' }}><Icon name="wifi-off" size={32} /></span>
-                        <p style={{ fontSize: 13, color: '#f87171', fontWeight: 600 }}>{error}</p>
-                        <button onClick={fetchData} className="btn-primary">
-                            <Icon name="refresh-cw" size={14} />
-                            Reintentar
-                        </button>
+                ) : err ? (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, padding:48, background:'#180b0b', border:'1px solid #3d1a1a', borderRadius:16, textAlign:'center' }}>
+                        <Icon name="wifi-off" size={34} color="#f87171" />
+                        <p style={{ fontSize:13, color:'#f87171', fontWeight:600 }}>{err}</p>
+                        <button onClick={load} className="btn-p"><Icon name="refresh-cw" size={14} /> Reintentar</button>
                     </div>
                 ) : (
                     <>
-                        {/* Metric cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))', gap: 14, marginBottom: 24 }}>
-                            <MetricCard label="Cuotas Vencidas"  value={metrics.totalM}    sub="Total acumulado"       accent="#34d399" icon="file-text"      />
-                            <MetricCard label="Alumnos al Día"   value={metrics.alDia}     sub="Sin deudas a la fecha" accent="#34d399" icon="check-circle"   />
-                            <MetricCard label="Con Atraso"       value={metrics.pendiente} sub="Entre 1 y 2 cuotas"    accent="#fbbf24" icon="clock"          />
-                            <MetricCard label="Mora Crítica"     value={metrics.morosos}   sub="+3 meses de atraso"    accent="#f87171" icon="alert-triangle" />
-                            <DonutChart alDia={metrics.alDia} pendiente={metrics.pendiente} criticos={metrics.morosos} />
+                        {/* Metrics */}
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(190px,1fr))', gap:14, marginBottom:24 }}>
+                            <MetricCard label="Cuotas Vencidas"  value={metrics.total_owed} sub="Total acumulado"       color="#34d399" icon="file-text"      />
+                            <MetricCard label="Alumnos al Día"   value={metrics.alDia}      sub="Sin deudas a la fecha" color="#34d399" icon="check-circle"   />
+                            <MetricCard label="Con Atraso"       value={metrics.pend}       sub="Entre 1 y 2 cuotas"   color="#fbbf24" icon="clock"           />
+                            <MetricCard label="Mora Crítica"     value={metrics.crit}       sub="+3 meses de atraso"   color="#f87171" icon="alert-triangle"  />
+                            <DonutChart alDia={metrics.alDia} pend={metrics.pend} crit={metrics.crit} />
                         </div>
 
-                        <hr className="section-divider" />
+                        <hr className="divider" />
 
                         {/* Filters */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }} className="no-print">
-                            <div className="search-wrap">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar alumno, curso o nivel…"
-                                    className="search-input"
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                />
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:10 }} className="no-print">
+                            <div className="s-wrap" style={{ flex:1, minWidth:220 }}>
+                                <span className="s-ico"><Icon name="search" size={14} /></span>
+                                <input className="s-input" type="text" placeholder="Buscar alumno, curso o nivel…" value={q} onChange={e=>setQ(e.target.value)} />
                             </div>
-
-                            <div style={{ display: 'flex', gap: 3, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 3 }}>
-                                {[['todos', 'Todos'], ['aldia', 'Al Día'], ['pend', 'Pendiente'], ['critico', 'Crítico']].map(([v, l]) => (
-                                    <button key={v} className={"filter-btn" + (filterStatus === v ? ' active' : '')} onClick={() => setFilterStatus(v)}>{l}</button>
+                            <div style={{ display:'flex', gap:3, background:'var(--surface)', border:'1px solid var(--b0)', borderRadius:10, padding:3 }}>
+                                {[['todos','Todos'],['aldia','Al Día'],['pend','Pendiente'],['critico','Crítico']].map(([v,l])=>(
+                                    <button key={v} className={"fbtn"+(fSt===v?' active':'')} onClick={()=>setFSt(v)}>{l}</button>
                                 ))}
                             </div>
-
-                            <select className="filter-select" value={filterInsc} onChange={e => setFilterInsc(e.target.value)}>
+                            <select className="fsel" value={fIn} onChange={e=>setFIn(e.target.value)}>
                                 <option value="todos">Inscripción: Todas</option>
                                 <option value="pagada">Inscripción Pagada</option>
-                                <option value="pendiente">Inscripción Pendiente</option>
+                                <option value="pend2">Inscripción Pendiente</option>
                             </select>
-
-                            <select className="filter-select" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
+                            <select className="fsel" value={fLv} onChange={e=>setFLv(e.target.value)}>
                                 <option value="todos">Todos los niveles</option>
-                                {levels.map(l => <option key={l} value={l}>{l}</option>)}
+                                {levels.map(l=><option key={l} value={l}>{l}</option>)}
                             </select>
-
-                            <select className="filter-select" value={filterGrade} onChange={e => setFilterGrade(e.target.value)}>
+                            <select className="fsel" value={fGr} onChange={e=>setFGr(e.target.value)}>
                                 <option value="todos">Todos los cursos</option>
-                                {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                                {grades.map(g=><option key={g} value={g}>{g}</option>)}
                             </select>
-
-                            {hasFilters && (
-                                <button onClick={clearFilters} className="filter-btn" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <Icon name="x" size={12} />
-                                    Limpiar
+                            {hasF && (
+                                <button onClick={clearF} className="fbtn" style={{ display:'flex', alignItems:'center', gap:5 }}>
+                                    <Icon name="x" size={12} /> Limpiar
                                 </button>
                             )}
                         </div>
 
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                            Mostrando <span style={{ color: '#34d399', fontWeight: 700 }}>{filtered.length}</span> de {families.length} alumnos
-                            {hasFilters && <span> · filtros activos</span>}
+                        <p style={{ fontSize:11, color:'var(--t2)', marginBottom:10 }}>
+                            Mostrando <strong style={{ color:'var(--green)' }}>{filtered.length}</strong> de {fams.length} alumnos{hasF && ' · filtros activos'}
                         </p>
 
                         {/* Table */}
-                        <div className="table-wrapper">
-                            <div style={{ overflowX: 'auto' }}>
-                                <table className="data-table">
+                        <div className="tbl-wrap">
+                            <div style={{ overflowX:'auto' }}>
+                                <table className="tbl">
                                     <thead>
                                         <tr>
-                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('fullName')}>
-                                                Nombre y Apellido <SortIcon col="fullName" />
-                                            </th>
-                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('grade')}>
-                                                Curso <SortIcon col="grade" />
-                                            </th>
-                                            <th className="sortable" style={{ textAlign: 'left' }} onClick={() => handleSort('level')}>
-                                                Nivel <SortIcon col="level" />
-                                            </th>
-                                            <th style={{ textAlign: 'center' }}>Inscripción</th>
-                                            <th className="sortable" style={{ textAlign: 'center' }} onClick={() => handleSort('monthsOwed')}>
-                                                Cuotas <SortIcon col="monthsOwed" />
-                                            </th>
+                                            <th className="sortable" style={{ textAlign:'left' }} onClick={()=>toggleSort('fullName')}>Nombre y Apellido <SortIco col="fullName" /></th>
+                                            <th className="sortable" style={{ textAlign:'left' }} onClick={()=>toggleSort('grade')}>Curso <SortIco col="grade" /></th>
+                                            <th className="sortable" style={{ textAlign:'left' }} onClick={()=>toggleSort('level')}>Nivel <SortIco col="level" /></th>
+                                            <th style={{ textAlign:'center' }}>Inscripción</th>
+                                            <th className="sortable" style={{ textAlign:'center' }} onClick={()=>toggleSort('owed')}>Cuotas <SortIco col="owed" /></th>
                                             <th>Estado</th>
-                                            <th style={{ textAlign: 'center' }} className="no-print">Detalle</th>
+                                            <th style={{ textAlign:'center' }} className="no-print">Detalle</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filtered.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7}>
-                                                    <div className="empty-state">
-                                                        <span style={{ display: 'block', marginBottom: 10 }}><Icon name="search-x" size={28} /></span>
-                                                        <p style={{ fontSize: 13, marginBottom: 8 }}>No se encontraron alumnos con esos filtros</p>
-                                                        {hasFilters && (
-                                                            <button onClick={clearFilters} className="btn-primary" style={{ margin: '0 auto', fontSize: 12 }}>
-                                                                Limpiar filtros
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                        {filtered.length===0 ? (
+                                            <tr><td colSpan={7}>
+                                                <div className="empty">
+                                                    <Icon name="search-x" size={28} style={{ marginBottom:10 }} />
+                                                    <p style={{ fontSize:13, marginBottom:8 }}>Sin resultados con estos filtros</p>
+                                                    {hasF && <button onClick={clearF} className="btn-p" style={{ margin:'0 auto', fontSize:12 }}>Limpiar filtros</button>}
+                                                </div>
+                                            </td></tr>
                                         ) : filtered.map(f => {
-                                            const st = getStatusInfo(f.monthsOwed);
+                                            const s = statusOf(f.owed);
                                             return (
-                                                <tr key={f.id} onClick={() => setSelectedFamily(f)}>
-                                                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{f.fullName}</td>
-                                                    <td style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.grade}</td>
-                                                    <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.level}</td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <span className={"badge " + (f.hasInscripcion ? 'badge-insc-ok' : 'badge-insc-pend')}>
-                                                            {f.hasInscripcion ? 'Pagada' : 'Pendiente'}
-                                                        </span>
+                                                <tr key={f.id} onClick={()=>setSel(f)}>
+                                                    <td style={{ fontWeight:600, color:'var(--t0)' }}>{f.fullName}</td>
+                                                    <td style={{ fontSize:11, fontWeight:700, color:'var(--t2)', textTransform:'uppercase', letterSpacing:'.05em' }}>{f.grade}</td>
+                                                    <td style={{ fontSize:11, color:'var(--t2)' }}>{f.level}</td>
+                                                    <td style={{ textAlign:'center' }}>
+                                                        <span className={"badge "+(f.hasInsc?'b-ipk':'b-ipd')}>{f.hasInsc?'Pagada':'Pendiente'}</span>
                                                     </td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <span className="serif" style={{ fontSize: 22, fontWeight: 700, color: st.color }}>{f.monthsOwed}</span>
+                                                    <td style={{ textAlign:'center' }}>
+                                                        <span className="serif" style={{ fontSize:22, fontWeight:700, color:s.color }}>{f.owed}</span>
                                                     </td>
-                                                    <td><StatusBadge months={f.monthsOwed} /></td>
-                                                    <td style={{ textAlign: 'center' }} className="no-print">
-                                                        <button
-                                                            style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                                                            onClick={e => { e.stopPropagation(); setSelectedFamily(f); }}
-                                                        >
+                                                    <td><SBadge n={f.owed} /></td>
+                                                    <td style={{ textAlign:'center' }} className="no-print">
+                                                        <button onClick={e=>{e.stopPropagation();setSel(f);}} style={{ padding:6, borderRadius:8, background:'transparent', border:'none', color:'var(--t2)', cursor:'pointer' }}>
                                                             <Icon name="eye" size={14} />
                                                         </button>
                                                     </td>
@@ -920,21 +692,20 @@ const App = () => {
                             </div>
                         </div>
 
-                        <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 24 }}>
+                        <p style={{ fontSize:10, color:'var(--t2)', textAlign:'center', marginTop:24 }}>
                             Instituto Leloir · Sistema de Gestión de Cobranzas · {new Date().getFullYear()}
                         </p>
                     </>
                 )}
             </main>
 
-            {selectedFamily && <FamilyModal family={selectedFamily} onClose={() => setSelectedFamily(null)} />}
-            {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+            {sel   && <Modal fam={sel} onClose={()=>setSel(null)} />}
+            {toast && <Toast msg={toast} onDone={()=>setToast(null)} />}
         </div>
     );
 };
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
